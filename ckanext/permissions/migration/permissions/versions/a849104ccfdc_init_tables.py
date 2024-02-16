@@ -19,19 +19,38 @@ depends_on = None
 
 def upgrade():
     op.create_table(
+        "perm_permission_group",
+        sa.Column("name", sa.Text, primary_key=True, unique=True),
+        sa.Column("description", sa.Text, nullable=True),
+    )
+
+    op.create_table(
         "perm_permission",
         sa.Column("id", sa.Text, primary_key=True, unique=True),
         sa.Column("key", sa.Text, unique=True),
+        sa.Column("label", sa.Text, nullable=True),
+        sa.Column("description", sa.Text, nullable=True),
+        sa.Column(
+            "group",
+            sa.Text,
+            sa.ForeignKey("perm_permission_group.name", ondelete="CASCADE"),
+        ),
     )
 
     op.create_table(
         "perm_role",
         sa.Column("id", sa.Text, primary_key=True, unique=True),
         sa.Column("role", sa.Text, nullable=False),
-        sa.Column("permission", sa.Text, sa.ForeignKey("perm_permission.key")),
+        sa.Column("state", sa.Text, nullable=False),
+        sa.Column(
+            "permission",
+            sa.Text,
+            sa.ForeignKey("perm_permission.key", ondelete="CASCADE"),
+        ),
     )
 
 
 def downgrade():
     op.drop_table("perm_role")
     op.drop_table("perm_permission")
+    op.drop_table("perm_permission_group")

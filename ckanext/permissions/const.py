@@ -13,3 +13,5 @@ ALLOWED_ROLES = [
     ROLE_ORG_EDITOR,
     ROLE_ORG_MEMBER,
 ]
+
+ROLE_STATES = ("allow", "disallow", "ignore")

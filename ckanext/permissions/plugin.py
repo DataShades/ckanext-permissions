@@ -5,7 +5,6 @@ import ckan.plugins.toolkit as tk
 
 from ckanext.permissions.interfaces import IPermissions
 from ckanext.permissions.utils import collect_permission_groups
-from ckanext.permissions.types import PermissionGroup, PermissionItem
 
 
 @tk.blanket.auth_functions

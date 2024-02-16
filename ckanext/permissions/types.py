@@ -1,24 +1,26 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Optional, TypedDict
 from dataclasses import dataclass
 
 
-@dataclass
-class PermissionGroup:
-    """Permission group defines a group of permissions, that will be available
-    in code and in UI in a permission manage page"""
-
-    title: str
-    permissions: list["PermissionItem"]
-    description: Optional[str] = None
+class PermissionGroup(TypedDict):
+    name: str
+    permissions: list["Permission"]
+    description: Optional[str]
 
 
-@dataclass
-class PermissionItem:
-    """TODO: we are not describing the roles it applied for?
-    I guess, there will be a separate way to register new roles for the portal"""
+class Permission(TypedDict):
+    id: str
+    key: str
+    label: str
+    group: str
+    roles: list[str]
+    description: Optional[str]
 
-    auth_func: str
-    title: str
-    description: Optional[str] = None
+
+class PermissionRole(TypedDict):
+    id: str
+    role: str
+    permission: str
+    state: str
