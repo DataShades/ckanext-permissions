@@ -14,4 +14,8 @@ ALLOWED_ROLES = [
     ROLE_ORG_MEMBER,
 ]
 
-ROLE_STATES = ("allow", "disallow", "ignore")
+STATE_ALLOW = "allow"
+STATE_DISALLOW = "disallow"
+STATE_IGNORE = "ignore"
+
+ROLE_STATES = (STATE_ALLOW, STATE_DISALLOW, STATE_IGNORE)

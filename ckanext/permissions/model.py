@@ -1,10 +1,10 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import cast
 from typing_extensions import Self, Optional
 
-from sqlalchemy import Column, Text, ForeignKey, CheckConstraint
+from sqlalchemy import Column, Text, ForeignKey, CheckConstraint, delete
 from sqlalchemy.orm import Query
 
 import ckan.types as types
@@ -90,7 +90,7 @@ class Permission(tk.BaseModel):
         group: str,
         label: Optional[str] = None,
         description: Optional[str] = None,
-        roles: Optional[list[str]] = None,
+        roles: Optional[list[perm_types.PermissionRolePayload]] = None,
     ) -> Self:
         """Define a permission with/without default roles"""
         if permission := cls.get(key=key):
@@ -107,30 +107,33 @@ class Permission(tk.BaseModel):
         return permission
 
     @classmethod
-    def set_permission_roles(cls, key: str, roles: list[str]) -> list[str]:
-        if not cls.is_permission_exist(key):
-            model.Session.add(cls(key=key))
-
+    def set_permission_roles(
+        cls, key: str, roles: list[perm_types.PermissionRolePayload]
+    ) -> perm_types.Permission:
         for role in roles:
-            Role.create(role=role, permission=key)
+            if existing_role := Role.get(role["role"], permission=key):
+                setattr(existing_role, "state", role["state"])
+            else:
+                Role.create(role=role["role"], permission=key, state=role["state"])
 
         model.Session.commit()
 
-        return cls.get_roles_for_permission(key)
+        return cast(Permission, cls.get(key)).dictize({})
 
     @classmethod
-    def unset_permission_roles(cls, key: str, roles: list[str]) -> list[str]:
+    def unset_permission_roles(
+        cls, key: str, roles: list[perm_types.PermissionRolePayload]
+    ) -> perm_types.Permission:
         for role in roles:
-            role = Role.get(role=role, permission=key)
+            role = Role.get(role["role"], permission=key)
 
             if not role:
                 continue
 
-            role.delete()
+            model.Session.delete(role)
+            model.Session.commit()
 
-        model.Session.commit()
-
-        return cls.get_roles_for_permission(key)
+        return cast(Permission, cls.get(key)).dictize({})
 
     @classmethod
     def is_permission_exist(cls, key: str) -> bool:
@@ -143,13 +146,8 @@ class Permission(tk.BaseModel):
         return permission.roles if permission else []
 
     @property
-    def roles(self) -> list[str]:
-        return [
-            role.role
-            for role in model.Session.query(Role)
-            .filter(Role.permission == self.key)
-            .all()
-        ]
+    def roles(self) -> list[Role]:
+        return model.Session.query(Role).filter(Role.permission == self.key).all()
 
     def dictize(self, context: types.Context) -> perm_types.Permission:
         return perm_types.Permission(
@@ -158,7 +156,7 @@ class Permission(tk.BaseModel):
             label=self.label,
             description=self.description,
             group=self.group,
-            roles=self.roles,
+            roles=[role.dictize(context) for role in self.roles],
         )
 
 
@@ -175,8 +173,8 @@ class Role(tk.BaseModel):
     )
 
     @classmethod
-    def create(cls, role: str, permission: str) -> Self:
-        role_permission = cls(role=role, permission=permission)
+    def create(cls, role: str, permission: str, state: str) -> Self:
+        role_permission = cls(role=role, permission=permission, state=state)
 
         model.Session.add(role_permission)
         model.Session.commit()

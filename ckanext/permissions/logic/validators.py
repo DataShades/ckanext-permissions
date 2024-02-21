@@ -9,21 +9,10 @@ import ckanext.permissions.model as perm_model
 
 
 def permission_role_is_allowed(role: str) -> str:
-    permission_allowed_roles([role])
-
-    return role
-
-
-def permission_allowed_roles(roles: list[str]) -> Any:
-    """Ensures that the tour with a given id exists"""
-
-    for role in roles:
-        if role in perm_const.ALLOWED_ROLES:
-            continue
-
+    if role not in perm_const.ALLOWED_ROLES:
         raise tk.Invalid(f"The role {role} is not supported.")
 
-    return roles
+    return role
 
 
 def permission_group_exists(group: str) -> str:

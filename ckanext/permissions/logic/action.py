@@ -37,26 +37,19 @@ def permission_define(context: Context, data_dict: DataDict) -> perm_types.Permi
     return perm_model.Permission.define_permission(**data_dict).dictize(context)
 
 
-@validate(schema.permission_set)
+@validate(schema.permission_set_roles)
 def permission_set_roles(
     context: Context, data_dict: DataDict
 ) -> perm_types.Permission:
-    """Set roles for a permission by permission key"""
-
-    return perm_model.Permission.set_permission(
+    return perm_model.Permission.set_permission_roles(
         data_dict["key"], data_dict["roles"]
-    ).dictize(context)
+    )
 
 
-@validate(schema.permission_unset)
+@validate(schema.permission_set_roles)
 def permission_unset_roles(
     context: Context, data_dict: DataDict
-) -> ActionResult.AnyDict:
-    """Unset roles for a permission by permission key"""
-
-    return {
-        "key": data_dict["key"],
-        "roles": perm_model.Permission.unset_permission(
-            data_dict["key"], data_dict["roles"]
-        ),
-    }
+) -> perm_types.Permission:
+    return perm_model.Permission.unset_permission_roles(
+        data_dict["key"], data_dict["roles"]
+    )

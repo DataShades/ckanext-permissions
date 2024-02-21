@@ -15,12 +15,15 @@ class Permission(TypedDict):
     key: str
     label: str
     group: str
-    roles: list[str]
+    roles: list[PermissionRole]
     description: Optional[str]
 
 
-class PermissionRole(TypedDict):
-    id: str
+class PermissionRolePayload(TypedDict):
     role: str
     permission: str
     state: str
+
+
+class PermissionRole(PermissionRolePayload):
+    id: str

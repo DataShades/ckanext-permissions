@@ -20,12 +20,9 @@ def permission_group_define(not_empty, unicode_safe, ignore_empty) -> Schema:
 @validator_args
 def permission_define(
     not_empty,
-    list_of_strings,
     unicode_safe,
     ignore,
-    default,
     ignore_empty,
-    permission_allowed_roles,
     permission_group_exists,
 ) -> Schema:
     role_schema = permission_role_define()
@@ -36,25 +33,35 @@ def permission_define(
         "label": [ignore_empty, unicode_safe],
         "description": [ignore_empty, unicode_safe],
         "group": [not_empty, unicode_safe, permission_group_exists],
-        "roles": permission_role_define(),
+        "roles": role_schema,
         "__extras": [ignore],
     }
 
 
 @validator_args
-def permission_set(
-    not_empty, list_of_strings, permission_allowed_roles, unicode_safe, ignore
-) -> Schema:
+def permission_set_roles(not_empty, unicode_safe, ignore, permission_exists) -> Schema:
+    role_schema = permission_role_define()
+    role_schema.pop("permission")
 
     return {
-        "key": [not_empty, unicode_safe],
-        "roles": [not_empty, list_of_strings, permission_allowed_roles],
+        "key": [not_empty, unicode_safe, permission_exists],
+        "roles": role_schema,
         "__extras": [ignore],
     }
 
 
-def permission_unset() -> Schema:
-    return permission_set()
+@validator_args
+def permission_unset_roles(
+    not_empty, unicode_safe, ignore, permission_exists
+) -> Schema:
+    role_schema = permission_role_define()
+    role_schema.pop("permission")
+
+    return {
+        "key": [not_empty, unicode_safe, permission_exists],
+        "roles": role_schema,
+        "__extras": [ignore],
+    }
 
 
 @validator_args
