@@ -140,10 +140,10 @@ class Permission(tk.BaseModel):
         return bool(cls.get(key))
 
     @classmethod
-    def get_roles_for_permission(cls, key: str) -> list[str]:
+    def get_roles_for_permission(cls, key: str) -> list[perm_types.PermissionRole]:
         permission = cls.get(key)
 
-        return permission.roles if permission else []
+        return [r.dictize({}) for r in permission.roles] if permission else []
 
     @property
     def roles(self) -> list[Role]:

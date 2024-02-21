@@ -15,55 +15,60 @@ from ckanext.permissions.model import Permission
 
 def check_access(
     action: str, context: types.Context, data_dict: Optional[dict[str, Any]] = None
-) -> bool | None:
+) -> types.AuthResult | None:
     if not is_permission_registered(action):
         return None
 
-    return check_permission(action, context, data_dict)
+    result = check_permission(action, context, data_dict)
+
+    if result is not None and not result["success"]:  # type: ignore
+        raise tk.NotAuthorized(result["msg"])  # type: ignore
+
+    return result
 
 
 def is_permission_registered(perm_name: str) -> bool:
-    return True
+    return bool(Permission.get(perm_name))
 
 
 def check_permission(
     perm_name: str, context: types.Context, data_dict: Optional[dict[str, Any]] = None
-) -> bool:
-    """TODO:
-    Check if a given user has a permission to do something. The list of
-    Permissions are defined by IPermissions (currently)."""
+) -> types.AuthResult | None:
+    roles = get_permission_roles(perm_name)
+    user_role = define_user_role(context, data_dict)
+
+    for role in roles:
+        if role["role"] != user_role:
+            continue
+
+        if role["state"] == perm_const.STATE_IGNORE:
+            return None
+
+        is_allowed = role["state"] == perm_const.STATE_ALLOW
+        return {
+            "success": is_allowed,
+            "msg": "" if is_allowed else f"Users with role {user_role} are not allowed",
+        }
+
+    return {"success": False, "msg": f"Users with role {user_role} are not allowed"}
+
+
+def define_user_role(
+    context: types.Context, data_dict: Optional[dict[str, Any]] = None
+) -> str:
+    if "user" not in context or not context["user"]:
+        return perm_const.ROLE_ANON
+
     userobj = model.User.get(context["user"])
 
     if not userobj:
-        return False
-
-    if userobj.sysadmin:
-        return True
-
-    roles = get_permission_roles(perm_name)
-    import ipdb
-
-    ipdb.set_trace()
-
-
-def define_user_role(user: model.User) -> str:
-    if user.is_anonymous:
         return perm_const.ROLE_ANON
 
-    if user.sysadmin:
+    if userobj.sysadmin:
         return perm_const.ROLE_SYSADMIN
 
-    return perm_const.perm_const.ROLE_USER
+    return perm_const.ROLE_USER
 
 
-def get_permission_roles(perm_name: str) -> list[str]:
-    return Permission.get_permission_roles(perm_name)
-
-
-def collect_permission_groups() -> list[perm_types.PermissionGroup]:
-    result = []
-
-    for plugin in reversed(list(p.PluginImplementations(IPermissions))):
-        result.append(plugin.get_permission_group())
-
-    return result
+def get_permission_roles(perm_name: str) -> list[perm_types.PermissionRole]:
+    return Permission.get_roles_for_permission(perm_name)
