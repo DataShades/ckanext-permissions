@@ -30,6 +30,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v4
+    - name: Apply CKAN patch
+      run: |
+         docker cp check_access.patch $(docker ps -q -f ancestor=ckan/ckan-dev:2.10.1):/tmp/
+         docker exec -it $(docker ps -q -f ancestor=ckan/ckan-dev:2.10.1) sh -c "cd /var/lib/ckan && patch -p1 < /tmp/check_access.patch"
     - name: Install requirements
       # Install any extra requirements your extension has here (dev requirements, other extensions etc)
       run: |
