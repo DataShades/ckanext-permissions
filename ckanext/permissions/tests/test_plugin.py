@@ -26,6 +26,8 @@ class TestPermissionCheck:
     def test_anon(self, permission: perm_types.Permission, user):
         """The permission factory comes with anon role disallow.
         TODO: rn it works only with auth_allow_anonymous_access on auth func"""
+        PermissionTestPlugin.permission_auth_called = 0
+
         with pytest.raises(
             tk.NotAuthorized, match="Users with role anonymous are not allowed"
         ):
@@ -43,6 +45,8 @@ class TestPermissionCheck:
 
     def test_regular_user(self, permission: perm_types.Permission, user):
         """The permission factory comes with anon role disallow"""
+        PermissionTestPlugin.permission_auth_called = 0
+
         self._set_role_state(permission["key"], const.ROLE_USER, const.STATE_DISALLOW)
 
         with pytest.raises(
@@ -62,6 +66,8 @@ class TestPermissionCheck:
 
     def test_sysadmin_user(self, permission: perm_types.Permission, sysadmin):
         """TODO: rn it works only with auth_sysadmins_check on auth func"""
+        PermissionTestPlugin.permission_auth_called = 0
+
         self._set_role_state(
             permission["key"], const.ROLE_SYSADMIN, const.STATE_DISALLOW
         )
@@ -86,6 +92,8 @@ class TestPermissionCheck:
     def test_check_anon_func_with_user(self, permission: perm_types.Permission, user):
         self._set_role_state(permission["key"], const.ROLE_ANON, const.STATE_IGNORE)
         self._set_role_state(permission["key"], const.ROLE_USER, const.STATE_IGNORE)
+
+        PermissionTestPlugin.permission_auth_called = 0
 
         call_action("permission_test", {"ignore_auth": False, "user": None})
         assert PermissionTestPlugin.permission_auth_called == 1
