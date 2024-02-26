@@ -2,14 +2,12 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
-import ckan.types as types
 import ckan.model as model
-import ckan.plugins as p
 import ckan.plugins.toolkit as tk
+import ckan.types as types
 
-import ckanext.permissions.types as perm_types
 import ckanext.permissions.const as perm_const
-from ckanext.permissions.interfaces import IPermissions
+import ckanext.permissions.types as perm_types
 from ckanext.permissions.model import Permission
 
 

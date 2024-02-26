@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 import logging
-from typing import cast
-from typing_extensions import Self, Optional
+from typing import Optional, cast
 
-from sqlalchemy import Column, Text, ForeignKey, CheckConstraint, delete
+from sqlalchemy import CheckConstraint, Column, ForeignKey, Text
 from sqlalchemy.orm import Query
+from typing_extensions import Self
 
-import ckan.types as types
 import ckan.model as model
-from ckan.plugins import toolkit as tk
+import ckan.types as types
 from ckan.model.types import make_uuid
+from ckan.plugins import toolkit as tk
 
 import ckanext.permissions.const as perm_const
 import ckanext.permissions.types as perm_types

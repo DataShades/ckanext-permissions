@@ -4,6 +4,7 @@ import ckan.plugins as p
 import ckan.plugins.toolkit as tk
 
 from ckanext.permissions.interfaces import IPermissions
+
 # from ckanext.permissions.utils import collect_permission_groups
 
 

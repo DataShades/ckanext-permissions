@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 import ckan.plugins.toolkit as tk
 
 import ckanext.permissions.const as perm_const

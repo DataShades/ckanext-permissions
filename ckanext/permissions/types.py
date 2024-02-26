@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from typing import Optional, TypedDict
-from dataclasses import dataclass
 
 
 class PermissionGroup(TypedDict):

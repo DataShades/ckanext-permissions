@@ -1,12 +1,11 @@
 from __future__ import annotations
 
-from ckan.types import Context, DataDict, ActionResult
 from ckan.logic import validate
+from ckan.types import Context, DataDict
 
 from ckanext.permissions import model as perm_model
 from ckanext.permissions import types as perm_types
 from ckanext.permissions.logic import schema
-
 
 # ** PERMISSION GROUP **
 

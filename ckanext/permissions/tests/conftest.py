@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import pytest
 import factory
-from pytest_factoryboy import register
+import pytest
 from faker import Faker
+from pytest_factoryboy import register
 
-import ckan.types as types
-import ckan.plugins.toolkit as tk
 import ckan.plugins as p
+import ckan.plugins.toolkit as tk
+import ckan.types as types
 from ckan.tests.factories import CKANFactory
 
 import ckanext.permissions.const as perm_const
@@ -41,7 +41,9 @@ class PermissionFactory(CKANFactory):
     key = "permission_test"
     label = factory.LazyFunction(fake.name)
     description = factory.LazyFunction(lambda: fake.sentence(nb_words=5))
-    group = factory.LazyFunction(lambda: PermissionGroupFactory()["name"])  # type: ignore
+    group = factory.LazyFunction(
+        lambda: PermissionGroupFactory()["name"]
+    )  # type: ignore
     roles = factory.LazyFunction(
         lambda: [{"role": perm_const.ROLE_ANON, "state": perm_const.STATE_DISALLOW}],
     )
