@@ -3,13 +3,13 @@ index 18ccd59e4..62da81720 100644
 --- a/ckan/logic/__init__.py
 +++ b/ckan/logic/__init__.py
 @@ -365,6 +365,10 @@ def check_access(action: str,
-        authorized to call the named action
+         authorized to call the named action
 
-    '''
+     '''
 +    from ckanext.permissions.utils import check_access as perm_check_access
 +
 +    if perm_check_access(action, context, data_dict):
 +        return True
 
-    # Auth Auditing.  We remove this call from the __auth_audit stack to show
-    # we have called the auth function
+     # Auth Auditing.  We remove this call from the __auth_audit stack to show
+     # we have called the auth function
