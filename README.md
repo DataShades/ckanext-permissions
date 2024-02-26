@@ -1,4 +1,4 @@
-[![Tests](https://github.com//ckanext-permissions/workflows/Tests/badge.svg?branch=main)](https://github.com//ckanext-permissions/actions)
+[![Tests](https://github.com/mutantsan/ckanext-permissions/actions/workflows/test.yml/badge.svg)](https://github.com/mutantsan/ckanext-permissions/actions/workflows/test.yml)
 
 # ckanext-permissions
 
