@@ -28,7 +28,7 @@ This feature is experimental. For now it requires alteration in CKAN core to wor
 
         # Auth Auditing.  We remove this call from the __auth_audit stack to show
         # we have called the auth function
-
+```
 
 ## Requirements
 
