@@ -8,7 +8,7 @@ import ckan.types as types
 
 import ckanext.permissions.const as perm_const
 import ckanext.permissions.types as perm_types
-from ckanext.permissions.model import Permission
+from ckanext.permissions.model import Permission, PermissionGroup
 
 
 def check_access(
@@ -70,3 +70,19 @@ def define_user_role(
 
 def get_permission_roles(perm_name: str) -> list[perm_types.PermissionRole]:
     return Permission.get_roles_for_permission(perm_name)
+
+
+def parse_permission_group_schemas() -> dict[str, perm_types.PermissionGroup]:
+    """TODO: now I'm using schema code to safe some time and check if it's
+    going to work. We need our implementation for reading perm group schemas"""
+    from ckanext.scheming.plugins import _load_schemas
+
+    schema_urls = tk.aslist(tk.config.get("ckanext.permissions.permission_groups"))
+    return _load_schemas(schema_urls, "name")
+
+
+def get_permission_groups() -> list[perm_types.PermissionGroup]:
+    from_schemas = parse_permission_group_schemas()
+    from_db = [perm_group.dictize({}) for perm_group in PermissionGroup.all()]
+
+    return list(from_schemas.values()) + from_db

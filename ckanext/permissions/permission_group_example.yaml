@@ -1,0 +1,22 @@
+name: Example group
+description: Description of the permission group
+permissions:
+  - key: test 1
+    label: Test permission
+    description: Description of the permission test
+    roles:
+      - role: anon
+        state: ignore
+      - role: user
+        state: allow
+      - role: sysadmin
+        state: disallow
+  - key: test 2
+    label: Test 2 permission
+    roles:
+      - role: anon
+        state: allow
+      - role: user
+        state: ignore
+      - role: sysadmin
+        state: allow

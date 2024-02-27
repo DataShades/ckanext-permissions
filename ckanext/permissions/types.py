@@ -5,23 +5,29 @@ from typing import Optional, TypedDict
 
 class PermissionGroup(TypedDict):
     name: str
-    permissions: list["Permission"]
+    permissions: list["PermissionDefinition"]
     description: Optional[str]
 
 
-class Permission(TypedDict):
-    id: str
+class PermissionDefinition(TypedDict):
     key: str
     label: str
-    group: str
-    roles: list[PermissionRole]
+    roles: list[PermissionRoleDefinition]
     description: Optional[str]
 
 
-class PermissionRolePayload(TypedDict):
+class Permission(PermissionDefinition):
+    id: str
+    group: str
+
+
+class PermissionRoleDefinition(TypedDict):
     role: str
-    permission: str
     state: str
+
+
+class PermissionRolePayload(PermissionRoleDefinition):
+    permission: str
 
 
 class PermissionRole(PermissionRolePayload):
