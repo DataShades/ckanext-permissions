@@ -1,3 +1,47 @@
+[build-system]
+requires = ["setuptools>=61.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ckanext-permissions"
+version = "0.0.1"
+description = "Permission system for CKAN"
+authors = [
+    {name = "DataShades", email = "datashades@linkdigital.com.au"},
+    {name = "Oleksandr Cherniavskyi", email = "mutantsan@gmail.com"},
+]
+maintainers = [
+    {name = "DataShades", email = "datashades@linkdigital.com.au"},
+]
+license = {text = "AGPL"}
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+]
+keywords = ["CKAN"]
+urls = {Homepage = "https://github.com//ckanext-permissions"}
+dependencies = []
+optional-dependencies = {}
+
+[project.readme]
+file = "README.md"
+content-type = "text/markdown"
+
+[project.entry-points]
+"babel.extractors" = {ckan = "ckan.lib.extract:extract_ckan"}
+
+[project.entry-points."ckan.plugins"]
+permissions = "ckanext.permissions.plugin:PermissionsPlugin"
+permissions_manager = "ckanext.permissions_manager.plugin:PermissionsManagerPlugin"
+permissions_test = "ckanext.permissions.tests.conftest:PermissionTestPlugin"
+
+[tool.setuptools.packages]
+find = {}
+
 [tool.black]
 # line-length = 88
 # preview = true
