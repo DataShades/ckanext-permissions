@@ -23,7 +23,7 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
 ]
 keywords = ["CKAN"]
-urls = {Homepage = "https://github.com//ckanext-permissions"}
+urls = {Homepage = "https://github.com/DataShades/ckanext-permissions"}
 dependencies = []
 optional-dependencies = {}
 
