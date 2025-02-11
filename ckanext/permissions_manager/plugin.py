@@ -4,15 +4,11 @@ import ckan.plugins as p
 import ckan.plugins.toolkit as tk
 import ckan.types as types
 
-from ckanext.collection.interfaces import CollectionFactory, ICollection
-from ckanext.permissions_manager.collection import PermissionsManagerCollection
-
 
 @tk.blanket.blueprints
 class PermissionsManagerPlugin(p.SingletonPlugin):
     p.implements(p.IConfigurer)
     p.implements(p.ISignal)
-    p.implements(ICollection, inherit=True)
 
     # IConfigurer
 
@@ -42,8 +38,3 @@ class PermissionsManagerPlugin(p.SingletonPlugin):
                 }
             ],
         }
-
-    # ICollection
-
-    def get_collection_factories(self) -> dict[str, CollectionFactory]:
-        return {"permissions-manager": PermissionsManagerCollection}

@@ -1,105 +1,87 @@
 from __future__ import annotations
 
 import logging
-from typing import Callable, Union
+from typing import Union
 
 from flask import Blueprint, Response
 from flask.views import MethodView
 
 import ckan.plugins.toolkit as tk
-from ckan.logic import parse_params
 
 from ckanext.ap_main.utils import ap_before_request
-from ckanext.collection.shared import get_collection
+
+from ckanext.permissions import utils
 
 log = logging.getLogger(__name__)
 perm_manager = Blueprint(
     "perm_manager", __name__, url_prefix="/admin-panel/permissions"
 )
+
 perm_manager.before_request(ap_before_request)
 
 
-class FileManagerView(MethodView):
+class PermissionManagerView(MethodView):
     def get(self) -> Union[str, Response]:
-        kwargs = parse_params(tk.request.args)
-        kwargs.update({"page": 1, "rows_per_page": 6})
-
         return tk.render(
             "perm_manager/list.html",
             extra_vars={
-                "collection": get_collection(
-                    "permissions-manager",
-                    kwargs,
-                ),
+                "permission_groups": utils.get_permission_groups(),
             },
         )
 
     def post(self) -> Response:
-        bulk_action = tk.request.form.get("bulk-action")
-        file_ids = tk.request.form.getlist("entity_id")
+        permissions = self._get_permissions()
 
-        action_func = self._get_bulk_action(bulk_action) if bulk_action else None
+        for permission, value in tk.request.form.items():
+            if "|" not in permission:
+                continue
 
-        if not action_func:
-            tk.h.flash_error(tk._("The bulk action is not implemented"))
-            return tk.redirect_to("perm_manager.list")
+            permission_key, role = permission.split("|")
+            permission = permissions[permission_key]
 
-        for file_id in file_ids:
-            try:
-                action_func(file_id)
-            except tk.ValidationError as e:
-                tk.h.flash_error(str(e))
-
-        return tk.redirect_to("perm_manager.list")
-
-    def _get_bulk_action(self, value: str) -> Callable[[str], None] | None:
-        return {
-            "1": self._remove_file,
-        }.get(value)
-
-    def _remove_file(self, file_id: str) -> None:
-        tk.get_action("files_file_delete")(
-            {"ignore_auth": True},
-            {"id": file_id},
-        )
-
-
-class FileManagerUploadView(MethodView):
-    def post(self):
-        file = tk.request.files.get("upload")
-
-        if not file:
-            tk.h.flash_error(tk._("Missing file object"))
-            return tk.redirect_to("perm_manager.list")
-
-        try:
-            tk.get_action("files_file_create")(
-                {"ignore_auth": True},
+            tk.get_action("permission_define")(
+                {},
                 {
-                    "name": file.filename,
-                    "upload": file,
+                    "key": permission_key,
+                    "label": permissions[permission_key]["label"],
+                    "description": permissions[permission_key].get("description", ""),
+                    "group": permissions[permission_key]["group"],
+                    "roles": [
+                        {
+                            "role": role,
+                            "permission": permission_key,
+                            "state": tk.request.form[permission],
+                        }
+                        for role in tk.request.form.getlist(permission)
+                    ],
                 },
             )
-        except (tk.ValidationError, OSError) as e:
-            tk.h.flash_error(str(e.error_summary))
-            return tk.redirect_to("perm_manager.list")
 
-        tk.h.flash_success(tk._("File has been uploaded!"))
         return tk.redirect_to("perm_manager.list")
 
+        # "key": [not_empty, unicode_safe],
+        # "label": [ignore_empty, unicode_safe],
+        # "description": [ignore_empty, unicode_safe],
+        # "group": [not_empty, unicode_safe, permission_group_exists],
+        # "roles": role_schema,
 
-class FileManagerDeleteView(MethodView):
-    def post(self, file_id: str):
-        try:
-            tk.get_action("files_file_delete")({"ignore_auth": True}, {"id": file_id})
-        except (tk.ValidationError, OSError) as e:
-            tk.h.flash_error(str(e.error_summary))
-            return tk.redirect_to("perm_manager.list")
+        # "role": [not_empty, unicode_safe, permission_role_is_allowed],
+        # "permission": [not_empty, unicode_safe, permission_exists],
+        # "state": [not_empty, unicode_safe, one_of(perm_const.ROLE_STATES)],
 
-        tk.h.flash_success(tk._("File has been deleted!"))
-        return tk.redirect_to("perm_manager.list")
+    def _get_permissions(self):
+        permission_groups = utils.get_permission_groups()
+
+        result = {}
+
+        for permission_group in permission_groups:
+            for permission in permission_group["permissions"]:
+                permission["group"] = permission_group["name"]
+                result[permission["key"]] = permission
+
+        return result
 
 
-perm_manager.add_url_rule("/manage", view_func=FileManagerView.as_view("list"))
+perm_manager.add_url_rule("/manage", view_func=PermissionManagerView.as_view("list"))
 
 blueprints = [perm_manager]

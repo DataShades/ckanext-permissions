@@ -1,22 +1,52 @@
 name: Example group
 description: Description of the permission group
 permissions:
-  - key: test 1
-    label: Test permission
-    description: Description of the permission test
+  - key: site_read
+    label: Read site
+    description: If user allow to access the portal
     roles:
-      - role: anon
-        state: ignore
+      - role: anonymous
+        state: disallow
       - role: user
         state: allow
       - role: sysadmin
         state: disallow
-  - key: test 2
-    label: Test 2 permission
+      - role: org_member
+        state: allow
+      - role: org_editor
+        state: allow
+      - role: org_admin
+        state: allow
+
+  - key: view_dataset
+    label: View datasets
+    description: If user allow to view datasets
     roles:
-      - role: anon
+      - role: anonymous
         state: allow
       - role: user
         state: ignore
       - role: sysadmin
+        state: allow
+      - role: org_member
+        state: allow
+      - role: org_editor
+        state: allow
+      - role: org_admin
+        state: allow
+
+  - key: add_collaborator
+    label: Add collaborator
+    roles:
+      - role: anonymous
+        state: disallow
+      - role: user
+        state: ignore
+      - role: sysadmin
+        state: allow
+      - role: org_member
+        state: allow
+      - role: org_editor
+        state: allow
+      - role: org_admin
         state: allow

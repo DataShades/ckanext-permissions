@@ -86,3 +86,14 @@ def get_permission_groups() -> list[perm_types.PermissionGroup]:
     from_db = [perm_group.dictize({}) for perm_group in PermissionGroup.all()]
 
     return list(from_schemas.values()) + from_db
+
+
+def get_registered_roles() -> dict[str, str]:
+    return {
+        perm_const.ROLE_ANON: "Anonymous user",
+        perm_const.ROLE_USER: "Authenticated user",
+        perm_const.ROLE_ORG_MEMBER: "Organization member",
+        perm_const.ROLE_ORG_EDITOR: "Organization editor",
+        perm_const.ROLE_ORG_ADMIN: "Organization admin",
+        perm_const.ROLE_SYSADMIN: "System administrator",
+    }

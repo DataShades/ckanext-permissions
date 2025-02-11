@@ -7,12 +7,71 @@
 {% endblock breadcrumb_content %}
 
 {% block ap_content %}
-    {% if collection.data.total %}
-        {{ collection.serializer.render() | safe }}
-    {% else %}
-        <p>
-            {{ _("No permission groups found") }}
-            <a href="{{ request.path }}">{{ _("Clear the search") }}</a>
-        </p>
-    {% endif %}
+    {% set registered_roles = h.get_registered_roles() %}
+
+    <form action="" method="POST">
+
+        <table class="table table-info table-striped" style="table-layout: fixed;">
+            <thead>
+                <tr>
+                    <th>{{ _("Permission") }}</th>
+
+                    {% for role_name, role_label in registered_roles.items() %}
+                        <th class="text-center">{{ role_label }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for perm_group in permission_groups %}
+                <tr>
+                    <td>
+                        <b>{{ perm_group.name }}</b>
+                    </td>
+                    <td colspan="{{ registered_roles | length }}">
+                        <i>{{ perm_group.description }}</i>
+                    </td>
+                </tr>
+
+
+                    {% for permission in perm_group.permissions %}
+                        <tr>
+                            <td class="ps-4">
+                                <p class="m-0">{{ permission.label }}</p>
+
+                                {% if permission.description %}
+                                    <p class="m-0 mt-2"><i>{{ permission.description }}</i></p>
+                                {% endif %}
+                            </td>
+
+                            {% for role in permission.roles %}
+                                {% set key = h.ap_munge_string(permission.key) %}
+                                {% set state = role.state or "ignore" %}
+
+                                <td style="position: relative;">
+                                    <div style="margin-top: 15px;">
+                                        <span class="tristate tristate-switcher">
+                                          <input type="radio" id="{{ role.role }}-{{ key }}-state-disallow" name="{{ permission.key }}|{{ role.role }}" value="disallow" {{ 'checked' if state == "disallow" }}>
+                                          <input type="radio" id="{{ role.role }}-{{ key }}-state-ignore" name="{{ permission.key }}|{{ role.role }}" value="ignore" {{ 'checked' if state == "ignore" }}>
+                                          <input type="radio" id="{{ role.role }}-{{ key }}-state-allow" name="{{ permission.key }}|{{ role.role }}" value="allow" {{ 'checked' if state == "allow" }}>
+                                          <i></i>
+                                          <label for="{{ role.role }}-{{ key }}-state-ignore">{{ _("Disallow") }}</label>
+                                          <label for="{{ role.role }}-{{ key }}-state-allow">{{ _("Ignore") }}</label>
+                                          <label for="{{ role.role }}-{{ key }}-state-disallow">{{ _("Allow") }}</label>
+                                        </span>
+                                    </div>
+                                </td>
+                            {% endfor %}
+                        </tr>
+                    {% endfor %}
+
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div class="form-actions">
+            <button type="submit" name="reset" value="1" class="btn btn-danger ms-auto">{{ _("Reset") }}</button>
+            <button type="submit" class="btn btn-primary">{{ _("Save") }}</button>
+        </div>
+    </form>
 {% endblock ap_content %}

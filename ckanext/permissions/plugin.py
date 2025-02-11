@@ -6,9 +6,9 @@ import ckan.plugins.toolkit as tk
 
 @tk.blanket.validators
 @tk.blanket.actions
+@tk.blanket.helpers
 class PermissionsPlugin(p.SingletonPlugin):
     p.implements(p.IConfigurer)
-    # p.implements(IPermissions)
 
     permissions = None
 
