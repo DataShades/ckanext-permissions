@@ -1,99 +1,90 @@
 from __future__ import annotations
 
-from typing import Any, Optional
+import inspect
+import os
 
-import ckan.model as model
+import yaml
+
 import ckan.plugins.toolkit as tk
-import ckan.types as types
 
-import ckanext.permissions.const as perm_const
+import ckanext.permissions.model as perm_model
 import ckanext.permissions.types as perm_types
-from ckanext.permissions.model import Permission, PermissionGroup
 
 
-def check_access(
-    action: str, context: types.Context, data_dict: Optional[dict[str, Any]] = None
-) -> types.AuthResult | None:
-    if not is_permission_registered(action):
-        return None
+def parse_permission_group_schemas() -> dict[str, perm_types.PermissionGroup]:
+    groups = _load_schemas(
+        tk.aslist(tk.config.get("ckanext.permissions.permission_groups")), "name"
+    )
 
-    result = check_permission(action, context, data_dict)
+    validate_groups(groups)
 
-    if result is not None and not result["success"]:  # type: ignore
-        raise tk.NotAuthorized(result["msg"])  # type: ignore
+    return groups
+
+
+def _load_schemas(schemas: list[str], type_field: str):
+    result = {}
+
+    for path in schemas:
+        schema = _load_schema(path)
+
+        if not schema:
+            continue
+
+        result[type_field] = schema
 
     return result
 
 
-def is_permission_registered(perm_name: str) -> bool:
-    return bool(Permission.get(perm_name))
+def _load_schema(path: str):
+    """
+    Given a path like "ckanext.permissions:default_group.yaml"
+    find the second part relative to the import path of the first
+    """
+
+    module, file_name = path.split(":", 1)
+
+    try:
+        # __import__ has an odd signature
+        imp_module = __import__(module, fromlist=[""])
+    except ImportError:
+        return
+
+    file_path = os.path.join(os.path.dirname(inspect.getfile(imp_module)), file_name)
+
+    if not os.path.exists(file_path):
+        return
+
+    with open(file_path) as file:
+        return yaml.safe_load(file)
 
 
-def check_permission(
-    perm_name: str, context: types.Context, data_dict: Optional[dict[str, Any]] = None
-) -> types.AuthResult | None:
-    roles = get_permission_roles(perm_name)
-    user_role = define_user_role(context, data_dict)
+def validate_groups(groups: dict[str, perm_types.PermissionGroup]) -> bool:
+    permissions = []
 
-    for role in roles:
-        if role["role"] != user_role:
-            continue
+    for group in groups.values():
+        assert isinstance(group, dict), "Permission group must be a dictionary"
+        assert "name" in group, "Permission group must have a name"
+        assert "description" in group, "Permission group must have a description"
+        assert "permissions" in group, "Permission group must have permissions"
 
-        if role["state"] == perm_const.STATE_IGNORE:
-            return None
+        for permission in group["permissions"]:
+            assert isinstance(permission, dict), "Permission must be a dictionary"
+            assert "key" in permission, "Permission must have a key"
+            assert "label" in permission, "Permission must have a label"
 
-        is_allowed = role["state"] == perm_const.STATE_ALLOW
-        return {
-            "success": is_allowed,
-            "msg": "" if is_allowed else f"Users with role {user_role} are not allowed",
-        }
+            if permission["key"] in permissions:
+                raise ValueError(f"Permission {permission['key']} is duplicated")
 
-    return {"success": False, "msg": f"Users with role {user_role} are not allowed"}
+            permissions.append(permission["key"])
 
-
-def define_user_role(
-    context: types.Context, data_dict: Optional[dict[str, Any]] = None
-) -> str:
-    if "user" not in context or not context["user"]:
-        return perm_const.ROLE_ANON
-
-    userobj = model.User.get(context["user"])
-
-    if not userobj:
-        return perm_const.ROLE_ANON
-
-    if userobj.sysadmin:
-        return perm_const.ROLE_SYSADMIN
-
-    return perm_const.ROLE_USER
-
-
-def get_permission_roles(perm_name: str) -> list[perm_types.PermissionRole]:
-    return Permission.get_roles_for_permission(perm_name)
-
-
-def parse_permission_group_schemas() -> dict[str, perm_types.PermissionGroup]:
-    """TODO: now I'm using schema code to safe some time and check if it's
-    going to work. We need our implementation for reading perm group schemas"""
-    from ckanext.scheming.plugins import _load_schemas
-
-    schema_urls = tk.aslist(tk.config.get("ckanext.permissions.permission_groups"))
-    return _load_schemas(schema_urls, "name")
+    return True
 
 
 def get_permission_groups() -> list[perm_types.PermissionGroup]:
-    from_schemas = parse_permission_group_schemas()
-    from_db = [perm_group.dictize({}) for perm_group in PermissionGroup.all()]
+    from ckanext.permissions.plugin import PermissionsPlugin
 
-    return list(from_schemas.values()) + from_db
+    return PermissionsPlugin._permissions_groups  # type: ignore
 
 
 def get_registered_roles() -> dict[str, str]:
-    return {
-        perm_const.ROLE_ANON: "Anonymous user",
-        perm_const.ROLE_USER: "Authenticated user",
-        perm_const.ROLE_ORG_MEMBER: "Organization member",
-        perm_const.ROLE_ORG_EDITOR: "Organization editor",
-        perm_const.ROLE_ORG_ADMIN: "Organization admin",
-        perm_const.ROLE_SYSADMIN: "System administrator",
-    }
+    return {role["id"]: role["label"] for role in perm_model.Role.all()}

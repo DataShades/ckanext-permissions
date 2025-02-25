@@ -44,21 +44,16 @@
                                 {% endif %}
                             </td>
 
-                            {% for role in permission.roles %}
+                            {% for role_id in registered_roles %}
                                 {% set key = h.ap_munge_string(permission.key) %}
-                                {% set state = role.state or "ignore" %}
 
-                                <td style="position: relative;">
-                                    <div style="margin-top: 15px;">
-                                        <span class="tristate tristate-switcher">
-                                          <input type="radio" id="{{ role.role }}-{{ key }}-state-disallow" name="{{ permission.key }}|{{ role.role }}" value="disallow" {{ 'checked' if state == "disallow" }}>
-                                          <input type="radio" id="{{ role.role }}-{{ key }}-state-ignore" name="{{ permission.key }}|{{ role.role }}" value="ignore" {{ 'checked' if state == "ignore" }}>
-                                          <input type="radio" id="{{ role.role }}-{{ key }}-state-allow" name="{{ permission.key }}|{{ role.role }}" value="allow" {{ 'checked' if state == "allow" }}>
-                                          <i></i>
-                                          <label for="{{ role.role }}-{{ key }}-state-ignore">{{ _("Disallow") }}</label>
-                                          <label for="{{ role.role }}-{{ key }}-state-allow">{{ _("Ignore") }}</label>
-                                          <label for="{{ role.role }}-{{ key }}-state-disallow">{{ _("Allow") }}</label>
-                                        </span>
+                                <td>
+                                    <div class="checkbox-wrapper">
+                                        <input type='hidden' value='unset' name='{{ permission.key }}|{{ role_id }}'>
+                                        <input type="checkbox" id="{{ role_id }}-{{ key }}" name="{{ permission.key }}|{{ role_id }}" value="set" {{ 'checked' if h.get_role_permissions(role_id, permission.key) }}/>
+                                        <label for="{{ role_id }}-{{ key }}" class="toggle">
+                                            <span></span>
+                                        </label>
                                     </div>
                                 </td>
                             {% endfor %}

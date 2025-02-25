@@ -32,3 +32,9 @@ class PermissionRolePayload(PermissionRoleDefinition):
 
 class PermissionRole(PermissionRolePayload):
     id: str
+
+
+class Role(TypedDict):
+    id: str
+    label: str
+    description: str

@@ -18,38 +18,35 @@ depends_on = None
 
 def upgrade():
     op.create_table(
-        "perm_permission_group",
-        sa.Column("name", sa.Text, primary_key=True, unique=True),
-        sa.Column("description", sa.Text, nullable=True),
-    )
-
-    op.create_table(
-        "perm_permission",
-        sa.Column("id", sa.Text, primary_key=True, unique=True),
-        sa.Column("key", sa.Text, unique=True),
-        sa.Column("label", sa.Text, nullable=True),
-        sa.Column("description", sa.Text, nullable=True),
-        sa.Column(
-            "group",
-            sa.Text,
-            sa.ForeignKey("perm_permission_group.name", ondelete="CASCADE"),
-        ),
-    )
-
-    op.create_table(
         "perm_role",
-        sa.Column("id", sa.Text, primary_key=True, unique=True),
-        sa.Column("role", sa.Text, nullable=False),
-        sa.Column("state", sa.Text, nullable=False),
-        sa.Column(
-            "permission",
-            sa.Text,
-            sa.ForeignKey("perm_permission.key", ondelete="CASCADE"),
-        ),
+        sa.Column("id", sa.String(), primary_key=True),
+        sa.Column("label", sa.String(), nullable=False),
+        sa.Column("description", sa.String(), nullable=False),
+    )
+
+    op.create_table(
+        "perm_user_role",
+        sa.Column("user", sa.String(), sa.ForeignKey("user.id"), primary_key=True),
+        sa.Column("role", sa.String(), sa.ForeignKey("perm_role.id"), primary_key=True),
+    )
+
+    op.create_table(
+        "perm_role_permission",
+        sa.Column("role", sa.String(), sa.ForeignKey("perm_role.id"), primary_key=True),
+        sa.Column("permission", sa.String(), nullable=False, primary_key=True),
+    )
+
+    # Insert default roles
+    op.execute(
+        "INSERT INTO perm_role (id, label, description) VALUES "
+        "('anonymous', 'Anonymous', 'Default role for anonymous users'), "
+        "('user', 'User', 'Regular user that will be assigned automatically for "
+        "all users on a portal'), "
+        "('sysadmin', 'Sysadmin', 'Superuser that can do everything') "
     )
 
 
 def downgrade():
+    op.drop_table("perm_role_permission")
+    op.drop_table("perm_user_role")
     op.drop_table("perm_role")
-    op.drop_table("perm_permission")
-    op.drop_table("perm_permission_group")

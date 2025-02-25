@@ -1,214 +1,105 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional, cast
 
-from sqlalchemy import CheckConstraint, Column, ForeignKey, Text
+from sqlalchemy import Column, ForeignKey, String
 from sqlalchemy.orm import Query
 from typing_extensions import Self
 
 import ckan.model as model
 import ckan.types as types
-from ckan.model.types import make_uuid
 from ckan.plugins import toolkit as tk
 
-import ckanext.permissions.const as perm_const
 import ckanext.permissions.types as perm_types
 
 log = logging.getLogger(__name__)
 
 
-class PermissionGroup(tk.BaseModel):
-    __tablename__ = "perm_permission_group"
-
-    name = Column(Text, primary_key=True)
-    description = Column(Text, nullable=True)
-
-    @property
-    def permissions(self) -> list[Permission]:
-        return (
-            model.Session.query(Permission).filter(Permission.group == self.name).all()
-        )
-
-    @classmethod
-    def get(cls, name: str) -> Self | None:
-        query: Query = model.Session.query(cls).filter(cls.name == name)
-
-        return query.one_or_none()
-
-    @classmethod
-    def all(cls) -> list[Self]:
-        query: Query = model.Session.query(cls).order_by(cls.name)
-
-        return query.all()
-
-    @classmethod
-    def define(cls, name: str, description: Optional[str] = None) -> Self:
-        if existing_group := cls.get(name):
-            return existing_group
-
-        permission_group = cls(name=name, description=description)
-
-        model.Session.add(permission_group)
-        model.Session.commit()
-
-        return permission_group
-
-    def delete(self) -> None:
-        model.Session().autoflush = False
-        model.Session.delete(self)
-
-    def dictize(self, context: types.Context) -> perm_types.PermissionGroup:
-        return perm_types.PermissionGroup(
-            name=self.name,
-            permissions=[
-                permission.dictize(context) for permission in self.permissions
-            ],
-            description=self.description,
-        )
-
-
-class Permission(tk.BaseModel):
-    __tablename__ = "perm_permission"
-
-    id = Column(Text, primary_key=True, default=make_uuid)
-    key = Column(Text, unique=True)
-    label = Column(Text, nullable=True)
-    description = Column(Text, nullable=True)
-    group = Column(Text, ForeignKey("perm_permission_group.name"))
-
-    @classmethod
-    def get(cls, key: str) -> Self | None:
-        query: Query = model.Session.query(cls).filter(cls.key == key)
-
-        return query.one_or_none()
-
-    @classmethod
-    def define_permission(
-        cls,
-        key: str,
-        group: str,
-        label: Optional[str] = None,
-        description: Optional[str] = None,
-        roles: Optional[list[perm_types.PermissionRolePayload]] = None,
-    ) -> Self:
-        """Define a permission with/without default roles"""
-        if permission := cls.get(key=key):
-            return permission
-
-        permission = cls(key=key, group=group, label=label, description=description)
-
-        model.Session.add(permission)
-        model.Session.commit()
-
-        if roles:
-            cls.set_permission_roles(key, roles)
-
-        return permission
-
-    @classmethod
-    def set_permission_roles(
-        cls, key: str, roles: list[perm_types.PermissionRolePayload]
-    ) -> perm_types.Permission:
-        for role in roles:
-            if existing_role := Role.get(role["role"], permission=key):
-                setattr(existing_role, "state", role["state"])
-            else:
-                Role.create(role=role["role"], permission=key, state=role["state"])
-
-        model.Session.commit()
-
-        return cast(Permission, cls.get(key)).dictize({})
-
-    @classmethod
-    def unset_permission_roles(
-        cls, key: str, roles: list[perm_types.PermissionRolePayload]
-    ) -> perm_types.Permission:
-        for role in roles:
-            role = Role.get(role["role"], permission=key)
-
-            if not role:
-                continue
-
-            model.Session.delete(role)
-            model.Session.commit()
-
-        return cast(Permission, cls.get(key)).dictize({})
-
-    @classmethod
-    def is_permission_exist(cls, key: str) -> bool:
-        return bool(cls.get(key))
-
-    @classmethod
-    def get_roles_for_permission(cls, key: str) -> list[perm_types.PermissionRole]:
-        permission = cls.get(key)
-
-        return [r.dictize({}) for r in permission.roles] if permission else []
-
-    @property
-    def roles(self) -> list[Role]:
-        return model.Session.query(Role).filter(Role.permission == self.key).all()
-
-    def dictize(self, context: types.Context) -> perm_types.Permission:
-        return perm_types.Permission(
-            id=self.id,
-            key=self.key,
-            label=self.label,
-            description=self.description,
-            group=self.group,
-            roles=[role.dictize(context) for role in self.roles],
-        )
-
-
 class Role(tk.BaseModel):
     __tablename__ = "perm_role"
 
-    id = Column(Text, primary_key=True, default=make_uuid)
-    role = Column(Text)
-    permission = Column(ForeignKey(Permission.key, ondelete="CASCADE"))
-    state = Column(Text, nullable=False)
-
-    __table_args__ = (
-        CheckConstraint(state.in_(perm_const.ROLE_STATES), name="check_status"),
-    )
+    id = Column(String, primary_key=True)
+    label = Column(String, nullable=False)
+    description = Column(String, nullable=False)
 
     @classmethod
-    def create(cls, role: str, permission: str, state: str) -> Self:
-        role_permission = cls(role=role, permission=permission, state=state)
+    def create(cls, role_id: str, label: str, description: str) -> Self:
+        role = cls(id=role_id, label=label, description=description)
 
-        model.Session.add(role_permission)
+        model.Session.add(role)
         model.Session.commit()
 
-        return role_permission
+        return role
 
     @classmethod
-    def get(cls, role: str, permission: str) -> Self | None:
-        query: Query = (
-            model.Session.query(cls)
-            .filter(cls.role == role)
-            .filter(cls.permission == permission)
+    def all(cls) -> list[Self]:
+        return [role.dictize({}) for role in model.Session.query(cls).all()]
+
+    def dictize(self, context: types.Context) -> perm_types.Role:
+        return perm_types.Role(
+            id=str(self.id),
+            label=str(self.label),
+            description=str(self.description),
         )
-
-        return query.one_or_none()
-
-    @classmethod
-    def unset(cls, role: str, permission: str) -> None:
-        role_permission = cls.get(role=role, permission=permission)
-
-        if not role_permission:
-            return
-
-        role_permission.delete()
-        model.Session.commit()
 
     def delete(self) -> None:
         model.Session().autoflush = False
         model.Session.delete(self)
 
-    def dictize(self, context: types.Context) -> perm_types.PermissionRole:
-        return perm_types.PermissionRole(
-            id=self.id,
-            role=self.role,
-            permission=self.permission,
-            state=self.state,
+
+class UserRole(tk.BaseModel):
+    __tablename__ = "perm_user_role"
+
+    user = Column(String, ForeignKey("user.id"), primary_key=True)
+    role = Column(String, ForeignKey("perm_role.id"), primary_key=True)
+
+    @classmethod
+    def get(cls, user: str, role: str) -> Self | None:
+        query: Query = model.Session.query(cls).filter(
+            cls.user == user, cls.role == role
         )
+
+        return query.one_or_none()
+
+    @classmethod
+    def create(cls, user: str, role: str) -> Self:
+        user_role = cls(user=user, role=role)
+
+        model.Session.add(user_role)
+        model.Session.commit()
+
+        return user_role
+
+    def delete(self) -> None:
+        model.Session().autoflush = False
+        model.Session.delete(self)
+
+
+class RolePermission(tk.BaseModel):
+    __tablename__ = "perm_role_permission"
+
+    role = Column(String, ForeignKey("perm_role.id"), primary_key=True)
+    permission = Column(String, primary_key=True)
+
+    @classmethod
+    def get(cls, role: str, permission: str) -> Self | None:
+        query: Query = model.Session.query(cls).filter(
+            cls.role == role, cls.permission == permission
+        )
+
+        return query.one_or_none()
+
+    @classmethod
+    def create(cls, role: str, permission: str, defer_commit: bool = True) -> Self:
+        role_permission = cls(role=role, permission=permission)
+
+        model.Session.add(role_permission)
+
+        if defer_commit:
+            model.Session.commit()
+
+        return role_permission
+
+    def delete(self) -> None:
+        model.Session().autoflush = False
+        model.Session.delete(self)
