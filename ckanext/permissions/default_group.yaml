@@ -1,15 +1,10 @@
 name: Default group
 description: Default permissions implemented within the ckanext-permissions
 permissions:
-  - key: read_dataset
+  - key: read_any_dataset
     label: Read any dataset
     description: User can read any dataset
 
-  - key: read_own_dataset
-    label: Read your own dataset
-
   - key: read_private_dataset
     label: Read private dataset
-
-  - key: read_own_private_dataset
-    label: Read your own private dataset
+    description: User can read private datasets

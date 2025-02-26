@@ -13,6 +13,7 @@ from ckanext.permissions import utils
 @tk.blanket.validators
 @tk.blanket.actions
 @tk.blanket.helpers
+@tk.blanket.auth_functions
 class PermissionsPlugin(p.SingletonPlugin):
     p.implements(p.IConfigurer)
     p.implements(p.ISignal)

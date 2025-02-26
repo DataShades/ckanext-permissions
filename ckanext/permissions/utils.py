@@ -6,7 +6,9 @@ import os
 import yaml
 
 import ckan.plugins.toolkit as tk
+from ckan import model
 
+import ckanext.permissions.const as perm_const
 import ckanext.permissions.model as perm_model
 import ckanext.permissions.types as perm_types
 
@@ -88,3 +90,25 @@ def get_permission_groups() -> list[perm_types.PermissionGroup]:
 
 def get_registered_roles() -> dict[str, str]:
     return {role["id"]: role["label"] for role in perm_model.Role.all()}
+
+
+def check_permission(permission: str, user: model.User | model.AnonymousUser) -> bool:
+    """Check if user has the given permission through any of their roles.
+
+    Args:
+        permission: The permission key to check
+        user: The user to check permissions for
+
+    Returns:
+        bool: True if user has the permission, False otherwise
+    """
+    if isinstance(user, model.AnonymousUser):
+        return (
+            perm_model.RolePermission.get(perm_const.Roles.Anonymous.value, permission)
+            is not None
+        )
+
+    return any(
+        perm_model.RolePermission.get(str(role.role_id), permission) is not None
+        for role in user.roles  # type: ignore
+    )
