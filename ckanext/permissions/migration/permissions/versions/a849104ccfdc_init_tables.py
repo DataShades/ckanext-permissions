@@ -26,13 +26,28 @@ def upgrade():
 
     op.create_table(
         "perm_user_role",
-        sa.Column("user", sa.String(), sa.ForeignKey("user.id"), primary_key=True),
-        sa.Column("role", sa.String(), sa.ForeignKey("perm_role.id"), primary_key=True),
+        sa.Column(
+            "user_id",
+            sa.String(),
+            sa.ForeignKey("user.id", ondelete="CASCADE"),
+            primary_key=True,
+        ),
+        sa.Column(
+            "role_id",
+            sa.String(),
+            sa.ForeignKey("perm_role.id", ondelete="CASCADE"),
+            primary_key=True,
+        ),
     )
 
     op.create_table(
         "perm_role_permission",
-        sa.Column("role", sa.String(), sa.ForeignKey("perm_role.id"), primary_key=True),
+        sa.Column(
+            "role_id",
+            sa.String(),
+            sa.ForeignKey("perm_role.id", ondelete="CASCADE"),
+            primary_key=True,
+        ),
         sa.Column("permission", sa.String(), nullable=False, primary_key=True),
     )
 

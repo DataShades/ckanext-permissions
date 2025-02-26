@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 from sqlalchemy import Column, ForeignKey, String
-from sqlalchemy.orm import Query
+from sqlalchemy.orm import Query, backref, relationship
 from typing_extensions import Self
 
 import ckan.model as model
@@ -23,13 +23,17 @@ class Role(tk.BaseModel):
     description = Column(String, nullable=False)
 
     @classmethod
-    def create(cls, role_id: str, label: str, description: str) -> Self:
-        role = cls(id=role_id, label=label, description=description)
+    def create(cls, data: dict[str, str]) -> Self:
+        role = cls(**data)
 
         model.Session.add(role)
         model.Session.commit()
 
         return role
+
+    @classmethod
+    def get(cls, role: str) -> Self | None:
+        return model.Session.query(cls).filter(cls.id == role).one_or_none()
 
     @classmethod
     def all(cls) -> list[Self]:
@@ -43,55 +47,76 @@ class Role(tk.BaseModel):
         )
 
     def delete(self) -> None:
-        model.Session().autoflush = False
         model.Session.delete(self)
+        model.Session.commit()
 
 
 class UserRole(tk.BaseModel):
     __tablename__ = "perm_user_role"
 
-    user = Column(String, ForeignKey("user.id"), primary_key=True)
-    role = Column(String, ForeignKey("perm_role.id"), primary_key=True)
+    user_id = Column(
+        String, ForeignKey("user.id", ondelete="CASCADE"), primary_key=True
+    )
+    role_id = Column(
+        String, ForeignKey("perm_role.id", ondelete="CASCADE"), primary_key=True
+    )
+
+    user = relationship(
+        model.User,
+        backref=backref("roles", cascade="all, delete"),
+    )
+
+    role = relationship(Role, cascade="all, delete")
 
     @classmethod
-    def get(cls, user: str, role: str) -> Self | None:
-        query: Query = model.Session.query(cls).filter(
-            cls.user == user, cls.role == role
-        )
-
-        return query.one_or_none()
+    def get_by_user(cls, user_id: str) -> list[Self]:
+        return model.Session.query(cls).filter(cls.user_id == user_id).all()
 
     @classmethod
-    def create(cls, user: str, role: str) -> Self:
-        user_role = cls(user=user, role=role)
+    def create(cls, user_id: str, role: str) -> Self:
+        for user_role in cls.get_by_user(user_id):
+            if user_role.role_id != role:
+                continue
+
+            return user_role
+
+        user_role = cls(user_id=user_id, role_id=role)
 
         model.Session.add(user_role)
         model.Session.commit()
 
         return user_role
 
-    def delete(self) -> None:
-        model.Session().autoflush = False
-        model.Session.delete(self)
+    @classmethod
+    def clear_user_roles(cls, user_id: str) -> None:
+        model.Session.query(UserRole).filter(UserRole.user_id == user_id).delete()
+        model.Session.commit()
+
+    @classmethod
+    def delete(cls, user_id: str, role: str) -> None:
+        model.Session.query(cls).filter(
+            cls.user_id == user_id, cls.role_id == role
+        ).delete()
+        model.Session.commit()
 
 
 class RolePermission(tk.BaseModel):
     __tablename__ = "perm_role_permission"
 
-    role = Column(String, ForeignKey("perm_role.id"), primary_key=True)
+    role_id = Column(String, ForeignKey("perm_role.id"), primary_key=True)
     permission = Column(String, primary_key=True)
 
     @classmethod
-    def get(cls, role: str, permission: str) -> Self | None:
+    def get(cls, role_id: str, permission: str) -> Self | None:
         query: Query = model.Session.query(cls).filter(
-            cls.role == role, cls.permission == permission
+            cls.role_id == role_id, cls.permission == permission
         )
 
         return query.one_or_none()
 
     @classmethod
-    def create(cls, role: str, permission: str, defer_commit: bool = True) -> Self:
-        role_permission = cls(role=role, permission=permission)
+    def create(cls, role_id: str, permission: str, defer_commit: bool = True) -> Self:
+        role_permission = cls(role_id=role_id, permission=permission)
 
         model.Session.add(role_permission)
 

@@ -1,5 +1,0 @@
-permissions-css:
-  filter: cssrewrite
-  output: ckanext-permissions/%(version)s-permissions.css
-  contents:
-    - css/style.css

@@ -1,21 +1,10 @@
-ROLE_ANON = "anonymous"
-ROLE_USER = "user"
-ROLE_SYSADMIN = "sysadmin"
-ROLE_ORG_ADMIN = "org_admin"
-ROLE_ORG_EDITOR = "org_editor"
-ROLE_ORG_MEMBER = "org_member"
+from enum import Enum
 
-ALLOWED_ROLES = [
-    ROLE_ANON,
-    ROLE_USER,
-    ROLE_SYSADMIN,
-    ROLE_ORG_ADMIN,
-    ROLE_ORG_EDITOR,
-    ROLE_ORG_MEMBER,
-]
+ROLE_ID_MIN_LENGTH = 1
+ROLE_ID_MAX_LENGTH = 50
 
-STATE_ALLOW = "allow"
-STATE_DISALLOW = "disallow"
-STATE_IGNORE = "ignore"
 
-ROLE_STATES = (STATE_ALLOW, STATE_DISALLOW, STATE_IGNORE)
+class Roles(Enum):
+    Anonymous = "anonymous"
+    User = "user"
+    Sysadmin = "sysadmin"

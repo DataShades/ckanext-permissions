@@ -1,0 +1,61 @@
+{% extends 'admin_panel/base.html' %}
+
+{% block ap_main_class %} permissions-role-manager {% endblock %}
+
+{% block breadcrumb_content %}
+    <li>{% link_for _("Roles manager"), request.endpoint %}</li>
+{% endblock breadcrumb_content %}
+
+{% block ap_content %}
+    {% set registered_roles = h.get_registered_roles() %}
+
+    <p>
+        <a href="{{ url_for('perm_manager.role_add') }}" class="btn btn-success">
+            {{ _("Add a new role") }}
+        </a>
+    </p>
+
+    <table class="table collection-table" style="table-layout: fixed;">
+        <colgroup>
+            <col style="width: 15%;">
+            <col style="width: 75%;">
+            <col style="width: 10%;">
+        </colgroup>
+        <thead>
+            <tr>
+                <th>{{ _("Label") }}</th>
+                <th>{{ _("Description") }}</th>
+                <th>{{ _("Actions") }}</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for role in roles %}
+                    <tr>
+                        <td>
+                            {{ role.label }}
+                            <pre>{{ role.id }}</pre>
+                        </td>
+                        <td>
+                            <i>{{ role.description }}</i>
+                        </td>
+                        <td>
+                            {% if not h.is_default_role(role.id) %}
+                                <form action="{{ h.url_for('perm_manager.role_delete') }}" method="POST">
+                                    <button
+                                        type="submit" name="id" value="{{ role.id }}"
+                                        class="btn btn-danger"
+                                        data-module="ap-confirm-action"
+                                        data-module-content="{{ _('Are you sure you want to delete the role?') }}"
+                                        data-module-with-data="true"
+                                        >
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock ap_content %}

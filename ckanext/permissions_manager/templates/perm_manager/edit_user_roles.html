@@ -1,0 +1,22 @@
+{% extends 'admin_panel/base.html' %}
+
+{% import 'macros/form.html' as form %}
+
+{% block ap_main_class %} permissions-create-role {% endblock %}
+
+{% block breadcrumb_content %}
+    <li>{% link_for _("Update user roles"), request.endpoint, user_id=user.id %}</li>
+{% endblock breadcrumb_content %}
+
+{% block ap_content %}
+    <form action="" method="POST">
+        <p>{% snippet 'user/snippets/placeholder.html', size=20, user_name=user.display_name %} {{ user.display_name }}</p>
+
+        {% snippet 'admin_panel/snippets/render_fields.html', fields=fields, data=data, errors=errors %}
+
+        <div class="form-actions">
+            <a type="submit" class="btn btn-default" href="{{ url_for('perm_manager.user_roles_list') }}">{{ _("Back") }}</a>
+            <button type="submit" class="btn btn-primary">{{ _("Update") }}</button>
+        </div>
+    </form>
+{% endblock ap_content %}

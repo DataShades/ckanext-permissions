@@ -37,7 +37,6 @@ content-type = "text/markdown"
 [project.entry-points."ckan.plugins"]
 permissions = "ckanext.permissions.plugin:PermissionsPlugin"
 permissions_manager = "ckanext.permissions_manager.plugin:PermissionsManagerPlugin"
-permissions_test = "ckanext.permissions.tests.conftest:PermissionTestPlugin"
 
 [tool.setuptools.packages]
 find = {}

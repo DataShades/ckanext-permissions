@@ -2,8 +2,12 @@ from __future__ import annotations
 
 import ckan.plugins as p
 import ckan.plugins.toolkit as tk
+from ckan import types
 
-from ckanext.permissions import types, utils
+from ckanext.permissions import const as perm_const
+from ckanext.permissions import model as perm_model
+from ckanext.permissions import types as perm_types
+from ckanext.permissions import utils
 
 
 @tk.blanket.validators
@@ -11,8 +15,9 @@ from ckanext.permissions import types, utils
 @tk.blanket.helpers
 class PermissionsPlugin(p.SingletonPlugin):
     p.implements(p.IConfigurer)
+    p.implements(p.ISignal)
 
-    _permissions_groups: types.PermissionGroup | None = None
+    _permissions_groups: perm_types.PermissionGroup | None = None
 
     # IConfigurer
 
@@ -23,5 +28,23 @@ class PermissionsPlugin(p.SingletonPlugin):
             )
 
         tk.add_template_directory(config_, "templates")
-        tk.add_public_directory(config_, "public")
-        tk.add_resource("assets", "permissions")
+
+    # ISignal
+
+    def get_signal_subscriptions(self) -> types.SignalMapping:
+        return {tk.signals.action_succeeded: [self.assign_default_user_role]}
+
+    @staticmethod
+    def assign_default_user_role(
+        action_name: str,
+        context: types.Context,
+        data_dict: types.DataDict,
+        result: types.DataDict,
+    ):
+        if action_name != "user_create":
+            return
+
+        roles = perm_model.UserRole.get_by_user(result["id"])
+
+        if perm_const.Roles.User.value not in roles:
+            perm_model.UserRole.create(result["id"], perm_const.Roles.User.value)
