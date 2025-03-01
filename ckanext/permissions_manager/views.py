@@ -32,6 +32,17 @@ class PermissionManagerView(MethodView):
         )
 
     def post(self) -> Response:
+        tk.get_action("permissions_update")(
+            {}, {"permissions": self._get_permissions()}
+        )
+
+        tk.h.flash_success("Permissions updated")
+
+        return tk.redirect_to("perm_manager.permission_list")
+
+    def _get_permissions(self) -> dict[str, dict[str, bool]]:
+        permissions = {}
+
         for key in tk.request.form.keys():
             if "|" not in key:
                 continue
@@ -39,23 +50,12 @@ class PermissionManagerView(MethodView):
             values = tk.request.form.getlist(key)
             permission, role_id = key.split("|")
 
-            role_perm = perm_model.RolePermission.get(
-                role_id=role_id, permission=permission
-            )
+            if permission not in permissions:
+                permissions[permission] = {}
 
-            if "set" in values:
-                if role_perm:
-                    continue
+            permissions[permission][role_id] = "set" in values
 
-                perm_model.RolePermission.create(role_id=role_id, permission=permission)
-            else:
-                role_perm.delete() if role_perm else None
-
-        model.Session.commit()
-
-        tk.h.flash_success("Permissions updated")
-
-        return tk.redirect_to("perm_manager.permission_list")
+        return permissions
 
 
 class RoleManagerView(MethodView):
@@ -63,7 +63,7 @@ class RoleManagerView(MethodView):
         return tk.render(
             "perm_manager/role_list.html",
             extra_vars={
-                "roles": perm_model.Role.all(),
+                "roles": sorted(perm_model.Role.all(), key=lambda x: x["label"]),
             },
         )
 
@@ -105,6 +105,41 @@ class RoleDelete(MethodView):
             tk.h.flash_error(str(e))
         else:
             tk.h.flash_success("Role has been deleted")
+
+        return tk.redirect_to("perm_manager.role_list")
+
+
+class RoleEdit(MethodView):
+    def get(self, role_id: str) -> Union[str, Response]:
+        return tk.render(
+            "perm_manager/edit_role.html",
+            extra_vars={"role": perm_model.Role.get(role_id), "errors": {}, "data": {}},
+        )
+
+    def post(self, role_id: str) -> Union[str, Response]:
+        payload = dict(tk.request.form)
+
+        tk.get_or_bust(payload, "description")
+
+        try:
+            tk.get_action("permission_role_update")(
+                {},
+                {
+                    "id": role_id,
+                    "description": payload["description"],
+                },
+            )
+        except tk.ValidationError as e:
+            return tk.render(
+                "perm_manager/edit_role.html",
+                extra_vars={
+                    "role": perm_model.Role.get(role_id),
+                    "errors": e.error_dict,
+                    "data": payload,
+                },
+            )
+
+        tk.h.flash_success("Role has been updated")
 
         return tk.redirect_to("perm_manager.role_list")
 
@@ -206,6 +241,7 @@ perm_manager.add_url_rule(
 perm_manager.add_url_rule("/roles", view_func=RoleManagerView.as_view("role_list"))
 perm_manager.add_url_rule("/roles/add", view_func=RoleAdd.as_view("role_add"))
 perm_manager.add_url_rule("/roles/delete", view_func=RoleDelete.as_view("role_delete"))
+perm_manager.add_url_rule("/roles/<role_id>", view_func=RoleEdit.as_view("role_edit"))
 
 perm_manager.add_url_rule(
     "/user-roles", view_func=UserRolesList.as_view("user_roles_list")

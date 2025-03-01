@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import inspect
 import os
+from typing import cast
 
 import yaml
 
@@ -9,6 +10,7 @@ import ckan.plugins.toolkit as tk
 from ckan import model
 
 import ckanext.permissions.const as perm_const
+import ckanext.permissions.logic.schema as perm_schema
 import ckanext.permissions.model as perm_model
 import ckanext.permissions.types as perm_types
 
@@ -32,7 +34,7 @@ def _load_schemas(schemas: list[str], type_field: str):
         if not schema:
             continue
 
-        result[type_field] = schema
+        result[schema[type_field]] = schema
 
     return result
 
@@ -64,18 +66,24 @@ def validate_groups(groups: dict[str, perm_types.PermissionGroup]) -> bool:
     permissions = []
 
     for group in groups.values():
-        assert isinstance(group, dict), "Permission group must be a dictionary"
-        assert "name" in group, "Permission group must have a name"
-        assert "description" in group, "Permission group must have a description"
-        assert "permissions" in group, "Permission group must have permissions"
+        data, errors = tk.navl_validate(
+            cast(dict, group), perm_schema.permission_group_schema()
+        )
 
-        for permission in group["permissions"]:
-            assert isinstance(permission, dict), "Permission must be a dictionary"
-            assert "key" in permission, "Permission must have a key"
-            assert "label" in permission, "Permission must have a label"
+        if errors:
+            raise tk.ValidationError(errors)
 
+        if not data.get("permissions"):
+            raise tk.ValidationError("Missing permissions")
+
+        if not isinstance(data["permissions"], list):
+            raise tk.ValidationError("Permissions must be a list")
+
+        for permission in data["permissions"]:
             if permission["key"] in permissions:
-                raise ValueError(f"Permission {permission['key']} is duplicated")
+                raise tk.ValidationError(
+                    f"Permission {permission['key']} is duplicated"
+                )
 
             permissions.append(permission["key"])
 
@@ -86,6 +94,12 @@ def get_permission_groups() -> list[perm_types.PermissionGroup]:
     from ckanext.permissions.plugin import PermissionsPlugin
 
     return PermissionsPlugin._permissions_groups  # type: ignore
+
+
+def get_permissions() -> list[perm_types.PermissionDefinition]:
+    from ckanext.permissions.plugin import PermissionsPlugin
+
+    return PermissionsPlugin._permissions  # type: ignore
 
 
 def get_registered_roles() -> dict[str, str]:

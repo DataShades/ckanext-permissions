@@ -8,3 +8,17 @@ permissions:
   - key: read_private_dataset
     label: Read private dataset
     description: User can read private datasets
+
+  - key: update_any_dataset
+    label: Update any dataset
+    description: User can update any dataset
+    depends_on:
+      - read_any_dataset
+
+  - key: delete_any_dataset
+    label: Delete any dataset
+    description: User can delete any dataset
+
+  - key: delete_any_resource
+    label: Delete any resource
+    description: User can delete any resource

@@ -1,0 +1,10 @@
+version: 1
+groups:
+  - annotation: ckanext-permissions
+    options:
+      - key: ckanext.permissions.permission_groups
+        description: The list of permission groups to load
+        type: list
+        editable: false
+        default:
+          - ckanext.permissions:default_group.yaml

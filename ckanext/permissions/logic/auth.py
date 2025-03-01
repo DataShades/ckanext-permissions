@@ -15,15 +15,13 @@ def package_show(
     user = model.User.get(context.get("user")) or model.AnonymousUser()
     package = context.get("package")  # type: ignore
 
-    if not user or not package:
+    if not package:
         return next_(context, data_dict or {})
 
     # Check permissions in order of precedence
     permission_checks = [
         ("read_any_dataset", None),
         ("read_private_dataset", lambda: package.private),
-        ("read_own_dataset", lambda: user.id == package.creator_user_id),
-        ("read_own_private_dataset", lambda: user.id == package.creator_user_id),
     ]
 
     for permission, condition in permission_checks:
@@ -32,5 +30,44 @@ def package_show(
 
         if perm_utils.check_permission(permission, user):
             return {"success": True}
+
+    return next_(context, data_dict or {})
+
+
+@tk.chained_auth_function
+@tk.auth_allow_anonymous_access
+def package_update(
+    next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
+) -> types.AuthResult:
+    user = model.User.get(context.get("user")) or model.AnonymousUser()
+
+    if perm_utils.check_permission("update_any_dataset", user):
+        return {"success": True}
+
+    return next_(context, data_dict or {})
+
+
+@tk.chained_auth_function
+@tk.auth_allow_anonymous_access
+def package_delete(
+    next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
+) -> types.AuthResult:
+    user = model.User.get(context.get("user")) or model.AnonymousUser()
+
+    if perm_utils.check_permission("delete_any_dataset", user):
+        return {"success": True}
+
+    return next_(context, data_dict or {})
+
+
+@tk.chained_auth_function
+@tk.auth_allow_anonymous_access
+def resource_delete(
+    next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
+) -> types.AuthResult:
+    user = model.User.get(context.get("user")) or model.AnonymousUser()
+
+    if perm_utils.check_permission("delete_any_resource", user):
+        return {"success": True}
 
     return next_(context, data_dict or {})

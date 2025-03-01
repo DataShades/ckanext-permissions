@@ -1,0 +1,8 @@
+name: Test group
+description: Test group permissions
+permissions:
+  - key: perm_1
+    label: Permission 1
+
+  - key: perm_2
+    label: Permission 2

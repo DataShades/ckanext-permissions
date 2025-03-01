@@ -12,13 +12,7 @@ class PermissionGroup(TypedDict):
 class PermissionDefinition(TypedDict):
     key: str
     label: str
-    roles: list[PermissionRoleDefinition]
     description: Optional[str]
-
-
-class Permission(PermissionDefinition):
-    id: str
-    group: str
 
 
 class PermissionRoleDefinition(TypedDict):

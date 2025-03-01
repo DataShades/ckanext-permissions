@@ -10,7 +10,6 @@ import ckanext.permissions.model as perm_model
 class TestRoleAutoassignment:
     def test_assign_user_role_on_create(self, user):
         """Test if a role is assigned to a user when it's created"""
-
         roles = tk.h.get_user_roles(user["id"])
         assert roles == ["user"]
 

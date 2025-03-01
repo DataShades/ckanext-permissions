@@ -23,8 +23,8 @@ class Role(tk.BaseModel):
     description = Column(String, nullable=False)
 
     @classmethod
-    def create(cls, data: dict[str, str]) -> Self:
-        role = cls(**data)
+    def create(cls, id: str, label: str, description: str) -> Self:
+        role = cls(id=id, label=label, description=description)
 
         model.Session.add(role)
         model.Session.commit()
@@ -38,6 +38,11 @@ class Role(tk.BaseModel):
     @classmethod
     def all(cls) -> list[Self]:
         return [role.dictize({}) for role in model.Session.query(cls).all()]
+
+    def update(self, description: str) -> None:
+        self.description = description
+
+        model.Session.commit()
 
     def dictize(self, context: types.Context) -> perm_types.Role:
         return perm_types.Role(
