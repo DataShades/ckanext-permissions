@@ -9,7 +9,7 @@ class PermissionGroup(TypedDict):
     description: Optional[str]
 
 
-class PermissionDefinition(TypedDict):
+class PermissionDefinition(TypedDict, total=False):
     key: str
     label: str
     description: Optional[str]

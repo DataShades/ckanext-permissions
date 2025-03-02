@@ -96,7 +96,7 @@ def get_permission_groups() -> list[perm_types.PermissionGroup]:
     return PermissionsPlugin._permissions_groups  # type: ignore
 
 
-def get_permissions() -> list[perm_types.PermissionDefinition]:
+def get_permissions() -> dict[str, perm_types.PermissionDefinition]:
     from ckanext.permissions.plugin import PermissionsPlugin
 
     return PermissionsPlugin._permissions  # type: ignore
