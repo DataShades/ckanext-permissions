@@ -1,0 +1,50 @@
+<form action="" method="POST">
+    <table class="table collection-table">
+        <colgroup>
+            <col style="width: 40%">
+            <col style="width: 40%">
+            <col style="width: 20%">
+        </colgroup>
+
+        <thead>
+            <tr>
+                <th>{{ _("User") }}</th>
+                <th>{{ _("Roles") }}</th>
+                <th>{{ _("Actions") }}</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for user in page.items %}
+                <tr>
+                    <td>
+                        <a href="{{ url_for('user.read', id=user.name) }}">
+                            {% snippet 'user/snippets/placeholder.html', size=20, user_name=user.display_name %}
+                            {{ user.display_name }}
+                        </a>
+                    </td>
+                    <td>
+                        {% for role in h.get_user_roles(user.id, [scope]) %}
+                            <span class="badge bg-success">{{ role }}</span>
+                        {% endfor %}
+                    </td>
+                    <td>
+                        {% if scope == 'global' %}
+                            {% set url = url_for('perm_manager.edit_user_role', user_id=user.id) %}
+                        {% else %}
+                            {% set url = url_for('perm_manager.organization_edit_user_role', org_id=group_dict.id, user_id=user.id) %}
+                        {% endif %}
+
+                        <a href="{{ url }}" class="btn btn-outline-primary">
+                            <i class="fas fa-edit"></i>
+                            {{ _("Edit") }}
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    {{ page.pager(q=q) }}
+
+</form>

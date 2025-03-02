@@ -3,6 +3,7 @@ from __future__ import annotations
 import logging
 
 from sqlalchemy import Column, ForeignKey, String
+from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Query, backref, relationship
 from typing_extensions import Self
 
@@ -65,6 +66,7 @@ class UserRole(tk.BaseModel):
     role_id = Column(
         String, ForeignKey("perm_role.id", ondelete="CASCADE"), primary_key=True
     )
+    scope = Column(ARRAY(String), nullable=True, default=["global"])
 
     user = relationship(
         model.User,
@@ -74,18 +76,23 @@ class UserRole(tk.BaseModel):
     role = relationship(Role, cascade="all, delete")
 
     @classmethod
-    def get_by_user(cls, user_id: str) -> list[Self]:
-        return model.Session.query(cls).filter(cls.user_id == user_id).all()
+    def get_by_user(cls, user_id: str, scope: list[str] | None = None) -> list[Self]:
+        query: Query = model.Session.query(cls).filter(cls.user_id == user_id)
+
+        if scope:
+            query = query.filter(cls.scope.contains(scope))
+
+        return query.all()
 
     @classmethod
-    def create(cls, user_id: str, role: str) -> Self:
-        for user_role in cls.get_by_user(user_id):
+    def create(cls, user_id: str, role: str, scope: list[str] | None = None) -> Self:
+        for user_role in cls.get_by_user(user_id, scope):
             if user_role.role_id != role:
                 continue
 
             return user_role
 
-        user_role = cls(user_id=user_id, role_id=role)
+        user_role = cls(user_id=user_id, role_id=role, scope=scope)
 
         model.Session.add(user_role)
         model.Session.commit()

@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import logging
-from typing import Union
+from typing import Any, Union
 
 from flask import Blueprint, Response
 from flask.views import MethodView
 
 import ckan.model as model
 import ckan.plugins.toolkit as tk
+import ckan.types as types
+from ckan.lib.helpers import Page
 
 from ckanext.ap_main.utils import ap_before_request
 
@@ -144,20 +146,57 @@ class RoleEdit(MethodView):
         return tk.redirect_to("perm_manager.role_list")
 
 
-class UserRolesList(MethodView):
+class BaseUserRolesList(MethodView):
+    def _get_active_users(self) -> list[model.User]:
+        """
+        Get all active users and sort them by display name.
+        """
+        return sorted(
+            (
+                model.Session.query(model.User)
+                .filter(model.User.state == model.State.ACTIVE)
+                .all()
+            ),
+            key=lambda x: x.display_name,
+        )
+
+
+class UserRolesList(BaseUserRolesList):
     def get(self) -> Union[str, Response]:
+        users = self._get_active_users()
+
         return tk.render(
             "perm_manager/user_roles_list.html",
             extra_vars={
-                "users": self._get_active_users(),
+                "page": Page(
+                    collection=users,
+                    page=tk.h.get_page_number(tk.request.args),
+                    url=tk.h.pager_url,
+                    item_count=len(users),
+                    items_per_page=int(tk.request.args.get("limit", 10)),
+                ),
             },
         )
 
-    def _get_active_users(self) -> list[model.User]:
-        return (
-            model.Session.query(model.User)
-            .filter(model.User.state == model.State.ACTIVE)
-            .all()
+
+class OrganizationUserRolesList(BaseUserRolesList):
+    def get(self, org_id: str) -> Union[str, Response]:
+        users = self._get_active_users()
+        org_dict = _get_org_dict(org_id)
+
+        return tk.render(
+            "perm_manager/organization/user_roles_list.html",
+            extra_vars={
+                "group_dict": org_dict,
+                "group_type": "organization",
+                "page": Page(
+                    collection=users,
+                    page=tk.h.get_page_number(tk.request.args),
+                    url=tk.h.pager_url,
+                    item_count=len(users),
+                    items_per_page=int(tk.request.args.get("limit", 10)),
+                ),
+            },
         )
 
 
@@ -202,6 +241,11 @@ class EditUserRole(MethodView):
         )
 
     def post(self, user_id: str) -> Union[str, Response]:
+        self._update_user_roles(user_id, "global")
+
+        return tk.redirect_to("perm_manager.user_roles_list")
+
+    def _update_user_roles(self, user_id: str, scope: str) -> Union[str, Response]:
         payload = {"roles": tk.request.form.getlist("roles")}
 
         user = model.User.get(user_id)
@@ -225,13 +269,56 @@ class EditUserRole(MethodView):
         perm_model.UserRole.clear_user_roles(user.id)
 
         for role in data["roles"]:
-            perm_model.UserRole.create(user_id=user.id, role=role)
+            perm_model.UserRole.create(user_id=user.id, role=role, scope=[scope])
 
         model.Session.commit()
 
         tk.h.flash_success("User roles updated")
 
-        return tk.redirect_to("perm_manager.edit_user_role", user_id=user_id)
+
+class OrganizationEditUserRole(EditUserRole):
+    def get(self, org_id: str, user_id: str) -> Union[str, Response]:
+        user = model.User.get(user_id)
+
+        if not user:
+            return tk.abort(404, "User not found")
+
+        org_dict = _get_org_dict(org_id)
+        scope = "organization"
+
+        return tk.render(
+            "perm_manager/organization/edit_user_roles.html",
+            extra_vars={
+                "user": user,
+                "data": {
+                    "roles": ",".join(
+                        tk.h.get_user_roles(user.id, f"{scope}:{org_dict['id']}")
+                    )
+                },
+                "errors": {},
+                "fields": self.fields,
+                "group_dict": org_dict,
+                "group_type": scope,
+            },
+        )
+
+    def post(self, org_id: str, user_id: str) -> Union[str, Response]:
+        self._update_user_roles(user_id, f"organization:{org_id}")
+
+        return tk.redirect_to(
+            "perm_manager.organization_user_roles_list", org_id=org_id
+        )
+
+
+def _get_org_dict(org_id: str) -> dict[str, Any]:
+    context = types.Context(user=tk.current_user.name, for_view=True)
+
+    try:
+        return tk.get_action("organization_show")(
+            context, {"id": org_id, "include_datasets": False}
+        )
+    except (tk.ObjectNotFound, tk.NotAuthorized):
+        tk.abort(404, tk._("Organization not found"))
 
 
 perm_manager.add_url_rule(
@@ -242,6 +329,16 @@ perm_manager.add_url_rule("/roles", view_func=RoleManagerView.as_view("role_list
 perm_manager.add_url_rule("/roles/add", view_func=RoleAdd.as_view("role_add"))
 perm_manager.add_url_rule("/roles/delete", view_func=RoleDelete.as_view("role_delete"))
 perm_manager.add_url_rule("/roles/<role_id>", view_func=RoleEdit.as_view("role_edit"))
+
+# organization user roles
+perm_manager.add_url_rule(
+    "/organization/user-roles/<org_id>",
+    view_func=OrganizationUserRolesList.as_view("organization_user_roles_list"),
+)
+perm_manager.add_url_rule(
+    "/organization/user-roles/<org_id>/<user_id>",
+    view_func=OrganizationEditUserRole.as_view("organization_edit_user_role"),
+)
 
 perm_manager.add_url_rule(
     "/user-roles", view_func=UserRolesList.as_view("user_roles_list")

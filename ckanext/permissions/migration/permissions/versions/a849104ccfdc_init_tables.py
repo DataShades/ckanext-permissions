@@ -38,6 +38,12 @@ def upgrade():
             sa.ForeignKey("perm_role.id", ondelete="CASCADE"),
             primary_key=True,
         ),
+        sa.Column(
+            "scope",
+            sa.ARRAY(sa.String()),
+            nullable=True,
+            default=["global"],
+        ),
     )
 
     op.create_table(

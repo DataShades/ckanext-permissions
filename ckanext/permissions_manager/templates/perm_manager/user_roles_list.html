@@ -9,51 +9,8 @@
 {% endblock breadcrumb_content %}
 
 {% block ap_content %}
-    <p>
-        {{ _("You can assign roles to users to control their access to the system.") }}
-    </p>
-    <p>
-        {{ h.render_markdown(_("Roles assigned there will be considered as a **global** roles.")) }}
-    </p>
-    <form action="" method="POST">
-        <table class="table collection-table">
-            <colgroup>
-                <col style="width: 40%">
-                <col style="width: 40%">
-                <col style="width: 20%">
-            </colgroup>
+    <p>{{ _("You can assign roles to users to control their access to the system.") }}</p>
+    <p>{{ h.render_markdown(_("Roles assigned there will be considered **global** roles.")) }}</p>
 
-            <thead>
-                <tr>
-                    <th>{{ _("User") }}</th>
-                    <th>{{ _("Roles") }}</th>
-                    <th>{{ _("Actions") }}</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                {% for user in users %}
-                    <tr>
-                        <td>
-                            <a href="{{ url_for('user.read', id=user.name) }}">
-                                {% snippet 'user/snippets/placeholder.html', size=20, user_name=user.display_name %}
-                                {{ user.display_name }}
-                            </a>
-                        </td>
-                        <td>
-                            {% for role in h.get_user_roles(user.id) %}
-                                <span class="badge bg-success">{{ role }}</span>
-                            {% endfor %}
-                        </td>
-                        <td>
-                            <a href="{{ url_for('perm_manager.edit_user_role', user_id=user.id) }}" class="btn btn-outline-primary">
-                                <i class="fas fa-edit"></i>
-                                {{ _("Edit") }}
-                            </a>
-                        </td>
-                    </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </form>
+    {% snippet 'perm_manager/user_roles_table.html', page=page, scope='global' %}
 {% endblock ap_content %}

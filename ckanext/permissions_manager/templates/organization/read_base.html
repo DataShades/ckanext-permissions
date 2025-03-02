@@ -1,0 +1,6 @@
+{% ckan_extends %}
+
+{% block content_primary_nav %}
+    {{ super() }}
+    {{ h.build_nav_icon('perm_manager.organization_user_roles_list', _('Roles'), org_id=group_dict.name, icon='user-friends') }}
+{% endblock %}
