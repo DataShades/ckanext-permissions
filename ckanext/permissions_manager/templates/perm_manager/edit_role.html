@@ -10,7 +10,6 @@
 
 {% block ap_content %}
     <form action="" method="POST">
-        {{ errors }}
         <p class="form-label"><b>{{ _('ID') }}</b></p>
         <p class="form-control">{{ role.id }}</p>
 
@@ -20,7 +19,7 @@
         {{ form.textarea('description', label=_('Description'), value=role.description, error=errors.description, attrs={"required": 1, "class": "form-control"}, is_required=True) }}
 
         <div class="form-actions">
-            <a href="{{ h.url_for('perm_manager.role_list') }}" class="btn btn-default">{{ _("Cancel") }}</a>
+            <a href="{{ h.url_for('perm_manager.role_list') }}" class="btn btn-outline-primary">{{ _("Cancel") }}</a>
             <button type="submit" class="btn btn-primary">{{ _("Update") }}</button>
         </div>
     </form>

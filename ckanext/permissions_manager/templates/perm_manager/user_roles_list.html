@@ -9,6 +9,12 @@
 {% endblock breadcrumb_content %}
 
 {% block ap_content %}
+    <p>
+        {{ _("You can assign roles to users to control their access to the system.") }}
+    </p>
+    <p>
+        {{ h.render_markdown(_("Roles assigned there will be considered as a **global** roles.")) }}
+    </p>
     <form action="" method="POST">
         <table class="table collection-table">
             <colgroup>

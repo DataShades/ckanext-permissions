@@ -42,4 +42,4 @@ jobs:
 
         ckan -c test.ini db init
     - name: Run tests
-      run: pytest --ckan-ini=test.ini --cov=ckanext.permissions --disable-warnings ckanext/permissions
+      run: pytest --cov=ckanext.permissions --disable-warnings ckanext/permissions
