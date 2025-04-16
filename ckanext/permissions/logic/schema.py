@@ -37,34 +37,6 @@ def permissions_update(default, convert_to_json_if_string, dict_only) -> types.S
     }
 
 
-# Permission group example
-
-# name: Default group
-# description: Default permissions implemented within the ckanext-permissions
-# permissions:
-#   - key: read_any_dataset
-#     label: Read any dataset
-#     description: User can read any dataset
-
-#   - key: read_private_dataset
-#     label: Read private dataset
-#     description: User can read private datasets
-
-#   - key: update_any_dataset
-#     label: Update any dataset
-#     description: User can update any dataset
-#     depends_on:
-#       - read_any_dataset
-
-#   - key: delete_any_dataset
-#     label: Delete any dataset
-#     description: User can delete any dataset
-
-#   - key: delete_any_resource
-#     label: Delete any resource
-#     description: User can delete any resource
-
-
 @validator_args
 def permission_group_schema(not_empty, unicode_safe) -> types.Schema:
     return {

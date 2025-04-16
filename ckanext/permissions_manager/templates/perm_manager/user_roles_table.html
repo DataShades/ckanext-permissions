@@ -24,7 +24,7 @@
                         </a>
                     </td>
                     <td>
-                        {% for role in h.get_user_roles(user.id, [scope]) %}
+                        {% for role in h.get_user_roles(user.id, scope, group_dict.id if group_dict else None) %}
                             <span class="badge bg-success">{{ role }}</span>
                         {% endfor %}
                     </td>

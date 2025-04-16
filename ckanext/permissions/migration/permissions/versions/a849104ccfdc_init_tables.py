@@ -40,9 +40,14 @@ def upgrade():
         ),
         sa.Column(
             "scope",
-            sa.ARRAY(sa.String()),
+            sa.String(),
+            primary_key=True,
+            default="global",
+        ),
+        sa.Column(
+            "scope_id",
+            sa.String(),
             nullable=True,
-            default=["global"],
         ),
     )
 

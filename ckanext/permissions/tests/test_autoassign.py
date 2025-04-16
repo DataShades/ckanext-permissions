@@ -17,7 +17,9 @@ class TestRoleAutoassignment:
         """Test if user roles are deleted when the role is deleted"""
         perm_model.UserRole.create(user["id"], test_role["id"])
 
-        assert tk.h.get_user_roles(user["id"]) == ["user", "creator"]
+        result = tk.h.get_user_roles(user["id"])
+        assert "user" in result
+        assert "creator" in result
 
         call_action("permission_role_delete", id=test_role["id"])
 

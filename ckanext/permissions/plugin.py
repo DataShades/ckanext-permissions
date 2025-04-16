@@ -61,7 +61,7 @@ class PermissionsPlugin(implementation.PermissionLabels, p.SingletonPlugin):
         if action_name != "user_create":
             return
 
-        roles = perm_model.UserRole.get_by_user(result["id"])
+        global_roles = perm_model.UserRole.get(result["id"], "global")
 
-        if perm_const.Roles.User.value not in roles:
+        if perm_const.Roles.User.value not in global_roles:
             perm_model.UserRole.create(result["id"], perm_const.Roles.User.value)

@@ -34,9 +34,13 @@ class PermissionManagerView(MethodView):
         )
 
     def post(self) -> Response:
-        tk.get_action("permissions_update")(
-            {}, {"permissions": self._get_permissions()}
-        )
+        try:
+            tk.get_action("permissions_update")(
+                {}, {"permissions": self._get_permissions()}
+            )
+        except tk.ValidationError as e:
+            tk.h.flash_error(str(e))
+            return tk.redirect_to("perm_manager.permission_list")
 
         tk.h.flash_success("Permissions updated")
 
@@ -241,11 +245,11 @@ class EditUserRole(MethodView):
         )
 
     def post(self, user_id: str) -> Union[str, Response]:
-        self._update_user_roles(user_id, "global")
+        return self._update_user_roles(user_id, "global")
 
-        return tk.redirect_to("perm_manager.user_roles_list")
-
-    def _update_user_roles(self, user_id: str, scope: str) -> Union[str, Response]:
+    def _update_user_roles(
+        self, user_id: str, scope: str, scope_id: str | None = None
+    ) -> Union[str, Response]:
         payload = {"roles": tk.request.form.getlist("roles")}
 
         user = model.User.get(user_id)
@@ -269,11 +273,20 @@ class EditUserRole(MethodView):
         perm_model.UserRole.clear_user_roles(user.id)
 
         for role in data["roles"]:
-            perm_model.UserRole.create(user_id=user.id, role=role, scope=[scope])
+            perm_model.UserRole.create(
+                user_id=user.id, role=role, scope=scope, scope_id=scope_id
+            )
 
         model.Session.commit()
 
         tk.h.flash_success("User roles updated")
+
+        if scope == "global":
+            return tk.redirect_to("perm_manager.user_roles_list")
+
+        return tk.redirect_to(
+            "perm_manager.organization_user_roles_list", org_id=scope_id
+        )
 
 
 class OrganizationEditUserRole(EditUserRole):
@@ -292,7 +305,7 @@ class OrganizationEditUserRole(EditUserRole):
                 "user": user,
                 "data": {
                     "roles": ",".join(
-                        tk.h.get_user_roles(user.id, f"{scope}:{org_dict['id']}")
+                        tk.h.get_user_roles(user.id, scope, org_dict["id"])
                     )
                 },
                 "errors": {},
@@ -303,11 +316,7 @@ class OrganizationEditUserRole(EditUserRole):
         )
 
     def post(self, org_id: str, user_id: str) -> Union[str, Response]:
-        self._update_user_roles(user_id, f"organization:{org_id}")
-
-        return tk.redirect_to(
-            "perm_manager.organization_user_roles_list", org_id=org_id
-        )
+        return self._update_user_roles(user_id, "organization", org_id)
 
 
 def _get_org_dict(org_id: str) -> dict[str, Any]:

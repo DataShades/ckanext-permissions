@@ -3,7 +3,6 @@ from __future__ import annotations
 import logging
 
 from sqlalchemy import Column, ForeignKey, String
-from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import Query, backref, relationship
 from typing_extensions import Self
 
@@ -66,7 +65,10 @@ class UserRole(tk.BaseModel):
     role_id = Column(
         String, ForeignKey("perm_role.id", ondelete="CASCADE"), primary_key=True
     )
-    scope = Column(ARRAY(String), nullable=True, default=["global"])
+
+    # scope = Column(ARRAY(String), nullable=True, default=["global"])
+    scope = Column(String, primary_key=True, default="global")
+    scope_id = Column(String, nullable=True)
 
     user = relationship(
         model.User,
@@ -76,23 +78,35 @@ class UserRole(tk.BaseModel):
     role = relationship(Role, cascade="all, delete")
 
     @classmethod
-    def get_by_user(cls, user_id: str, scope: list[str] | None = None) -> list[Self]:
-        query: Query = model.Session.query(cls).filter(cls.user_id == user_id)
+    def get(
+        cls, user_id: str, scope: str = "global", scope_id: str | None = None
+    ) -> list[Self]:
+        query: Query = (
+            model.Session.query(cls)
+            .filter(cls.user_id == user_id)
+            .filter(cls.scope == scope)
+        )
 
-        if scope:
-            query = query.filter(cls.scope.contains(scope))
+        if scope_id:
+            query = query.filter(cls.scope_id == scope_id)
 
         return query.all()
 
     @classmethod
-    def create(cls, user_id: str, role: str, scope: list[str] | None = None) -> Self:
-        for user_role in cls.get_by_user(user_id, scope):
+    def create(
+        cls,
+        user_id: str,
+        role: str,
+        scope: str = "global",
+        scope_id: str | None = None,
+    ) -> Self:
+        for user_role in cls.get(user_id, scope, scope_id):
             if user_role.role_id != role:
                 continue
 
             return user_role
 
-        user_role = cls(user_id=user_id, role_id=role, scope=scope)
+        user_role = cls(user_id=user_id, role_id=role, scope=scope, scope_id=scope_id)
 
         model.Session.add(user_role)
         model.Session.commit()
