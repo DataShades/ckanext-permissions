@@ -2,6 +2,8 @@
 
 # ckanext-permissions
 
+> **Warning:** This extension is still under development and not ready for production use.
+
 The extension allows you to build a Access Control List (ACL) system within CKAN.
 
 ![image.png](doc/image.png)
