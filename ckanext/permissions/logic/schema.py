@@ -6,12 +6,13 @@ from ckan.logic.schema import validator_args
 
 @validator_args
 def role_create(
-    not_empty, unicode_safe, role_id_validator, role_doesnt_exists
+    not_empty, unicode_safe, role_id_validator, role_doesnt_exists, ignore
 ) -> types.Schema:
     return {
         "id": [not_empty, unicode_safe, role_id_validator, role_doesnt_exists],
         "label": [not_empty, unicode_safe],
         "description": [not_empty, unicode_safe],
+        "__extras": [ignore],
     }
 
 

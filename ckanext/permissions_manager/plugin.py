@@ -6,6 +6,7 @@ import ckan.types as types
 
 
 @tk.blanket.blueprints
+@tk.blanket.helpers
 class PermissionsManagerPlugin(p.SingletonPlugin):
     p.implements(p.IConfigurer)
     p.implements(p.ISignal)

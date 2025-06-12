@@ -1,16 +1,14 @@
-{% extends 'admin_panel/base.html' %}
+{% extends 'perm_manager/base.html' %}
 
 {% import 'macros/form.html' as form %}
 
-{% block ap_main_class %} permissions-user-roles {% endblock %}
+{% block breadcrumb_label %}
+    {{ _("User roles list") }}
+{% endblock breadcrumb_label %}
 
-{% block breadcrumb_content %}
-    <li>{% link_for _("User roles list"), request.endpoint %}</li>
-{% endblock breadcrumb_content %}
-
-{% block ap_content %}
+{% block primary_content_inner %}
     <p>{{ _("You can assign roles to users to control their access to the system.") }}</p>
     <p>{{ h.render_markdown(_("Roles assigned there will be considered **global** roles.")) }}</p>
 
     {% snippet 'perm_manager/user_roles_table.html', page=page, scope='global' %}
-{% endblock ap_content %}
+{% endblock primary_content_inner %}

@@ -1,0 +1,13 @@
+.row.wrapper.permissions-manager-wrapper {
+    &:before {
+        display: none;
+    }
+
+    .module-content {
+        padding: 1.5rem 1rem;
+    }
+
+    .form-actions .btn {
+        flex-basis: unset;
+    }
+}

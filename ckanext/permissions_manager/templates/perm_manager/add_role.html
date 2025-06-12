@@ -1,15 +1,15 @@
-{% extends 'admin_panel/base.html' %}
+{% extends 'perm_manager/base.html' %}
 
 {% import 'macros/form.html' as form %}
 
-{% block ap_main_class %} permissions-create-role {% endblock %}
+{% block breadcrumb_label %}
+    {{ _("Create role") }}
+{% endblock breadcrumb_label %}
 
-{% block breadcrumb_content %}
-    <li>{% link_for _("Create role"), request.endpoint %}</li>
-{% endblock breadcrumb_content %}
-
-{% block ap_content %}
+{% block primary_content_inner %}
     <form action="" method="POST">
+        {{ h.csrf_input() }}
+
         {% set attrs = {"required": 1, "class": "form-control"} %}
 
         {{ form.input('id', label=_('ID'), placeholder=_('e.g creator'), value=data.id, error=errors.id, classes=[], attrs=attrs, is_required=True) }}
@@ -21,4 +21,4 @@
             <button type="submit" class="btn btn-primary">{{ _("Create") }}</button>
         </div>
     </form>
-{% endblock ap_content %}
+{% endblock primary_content_inner %}

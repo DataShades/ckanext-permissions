@@ -1,0 +1,37 @@
+{% extends "page.html" %}
+
+{% block breadcrumb_content %}
+    <li class="active">
+        <a href="{{ h.url_for(request.endpoint) }}">
+            {% block breadcrumb_label %}{% endblock %}
+        </a>
+    </li>
+{% endblock breadcrumb_content %}
+
+{% block main_content %}
+    {% block flash %}
+        {{ super() }}
+    {% endblock %}
+
+    {% block toolbar %}
+        {{ super() }}
+    {% endblock %}
+
+    <div class="row wrapper permissions-manager-wrapper">
+        {% block primary %}
+            <div class="primary col-12" role="main">
+                {% block primary_content %}
+                    <div class="module-content">
+                        {% block primary_content_inner %}{% endblock %}
+                    </div>
+                {% endblock %}
+            </div>
+        {% endblock %}
+    </div>
+{% endblock %}
+
+{%- block scripts -%}
+    {% asset 'permissions_manager/js' %}
+
+    {{ super() }}
+{% endblock %}
