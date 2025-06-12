@@ -11,17 +11,19 @@ import ckan.plugins.toolkit as tk
 import ckan.types as types
 from ckan.lib.helpers import Page
 
-from ckanext.ap_main.utils import ap_before_request
-
 from ckanext.permissions import model as perm_model
 from ckanext.permissions import utils
 
 log = logging.getLogger(__name__)
-perm_manager = Blueprint(
-    "perm_manager", __name__, url_prefix="/admin-panel/permissions"
-)
+perm_manager = Blueprint("perm_manager", __name__, url_prefix="/permissions")
 
-perm_manager.before_request(ap_before_request)
+
+@perm_manager.before_request
+def before_request() -> None:
+    try:
+        tk.check_access("sysadmin", {"user": tk.current_user.name})
+    except tk.NotAuthorized:
+        tk.abort(403, tk._("Need to be system administrator to administer"))
 
 
 class PermissionManagerView(MethodView):
@@ -34,9 +36,13 @@ class PermissionManagerView(MethodView):
         )
 
     def post(self) -> Response:
-        tk.get_action("permissions_update")(
-            {}, {"permissions": self._get_permissions()}
-        )
+        try:
+            tk.get_action("permissions_update")(
+                {}, {"permissions": self._get_permissions()}
+            )
+        except tk.ValidationError as e:
+            tk.h.flash_error(str(e))
+            return tk.redirect_to("perm_manager.permission_list")
 
         tk.h.flash_success("Permissions updated")
 
@@ -202,26 +208,26 @@ class OrganizationUserRolesList(BaseUserRolesList):
 
 class EditUserRole(MethodView):
     def __init__(self):
-        self.fields = [
-            {
-                "field_name": "roles",
-                "label": "Roles",
-                "help_text": "Select roles for the user",
-                "choices": [
-                    {"value": role_id, "label": role_label}
-                    for role_id, role_label in utils.get_registered_roles().items()
-                ],
-                "validators": "not_missing list_of_strings roles_exists",
-                "form_snippet": "tom_select.html",
-                "form_attrs": {"multiple": "true", "data-module-create": "false"},
-            }
-        ]
+        # self.fields = [
+        #     {
+        #         "field_name": "roles",
+        #         "label": "Roles",
+        #         "help_text": "Select roles for the user",
+        #         "choices": [
+        #             {"value": role_id, "label": role_label}
+        #             for role_id, role_label in utils.get_registered_roles().items()
+        #         ],
+        #         "validators": "not_missing list_of_strings roles_exists",
+        #         "form_snippet": "tom_select.html",
+        #         "form_attrs": {"multiple": "true", "data-module-create": "false"},
+        #     }
+        # ]
 
         self.schema = {
-            field["field_name"]: [
-                tk.get_validator(validator) for validator in field["validators"].split()
+            "roles": [
+                tk.get_validator(validator)
+                for validator in "not_missing list_of_strings roles_exists".split()
             ]
-            for field in self.fields
         }
 
     def get(self, user_id: str) -> Union[str, Response]:
@@ -236,16 +242,15 @@ class EditUserRole(MethodView):
                 "user": user,
                 "data": {"roles": ",".join(tk.h.get_user_roles(user.id))},
                 "errors": {},
-                "fields": self.fields,
             },
         )
 
     def post(self, user_id: str) -> Union[str, Response]:
-        self._update_user_roles(user_id, "global")
+        return self._update_user_roles(user_id, "global")
 
-        return tk.redirect_to("perm_manager.user_roles_list")
-
-    def _update_user_roles(self, user_id: str, scope: str) -> Union[str, Response]:
+    def _update_user_roles(
+        self, user_id: str, scope: str, scope_id: str | None = None
+    ) -> Union[str, Response]:
         payload = {"roles": tk.request.form.getlist("roles")}
 
         user = model.User.get(user_id)
@@ -258,22 +263,26 @@ class EditUserRole(MethodView):
         if errors:
             return tk.render(
                 "perm_manager/edit_user_roles.html",
-                extra_vars={
-                    "user": user,
-                    "data": data,
-                    "errors": errors,
-                    "fields": self.fields,
-                },
+                extra_vars={"user": user, "data": data, "errors": errors},
             )
 
         perm_model.UserRole.clear_user_roles(user.id)
 
         for role in data["roles"]:
-            perm_model.UserRole.create(user_id=user.id, role=role, scope=[scope])
+            perm_model.UserRole.create(
+                user_id=user.id, role=role, scope=scope, scope_id=scope_id
+            )
 
         model.Session.commit()
 
         tk.h.flash_success("User roles updated")
+
+        if scope == "global":
+            return tk.redirect_to("perm_manager.user_roles_list")
+
+        return tk.redirect_to(
+            "perm_manager.organization_user_roles_list", org_id=scope_id
+        )
 
 
 class OrganizationEditUserRole(EditUserRole):
@@ -292,22 +301,17 @@ class OrganizationEditUserRole(EditUserRole):
                 "user": user,
                 "data": {
                     "roles": ",".join(
-                        tk.h.get_user_roles(user.id, f"{scope}:{org_dict['id']}")
+                        tk.h.get_user_roles(user.id, scope, org_dict["id"])
                     )
                 },
                 "errors": {},
-                "fields": self.fields,
                 "group_dict": org_dict,
                 "group_type": scope,
             },
         )
 
     def post(self, org_id: str, user_id: str) -> Union[str, Response]:
-        self._update_user_roles(user_id, f"organization:{org_id}")
-
-        return tk.redirect_to(
-            "perm_manager.organization_user_roles_list", org_id=org_id
-        )
+        return self._update_user_roles(user_id, "organization", org_id)
 
 
 def _get_org_dict(org_id: str) -> dict[str, Any]:

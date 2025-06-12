@@ -1,71 +1,70 @@
-{% extends 'admin_panel/base.html' %}
+{% extends 'perm_manager/base.html' %}
 
-{% block ap_main_class %} permissions-manager {% endblock %}
+{% block breadcrumb_label %}
+    {{ _("Permissions manager") }}
+{% endblock breadcrumb_label %}
 
-{% block breadcrumb_content %}
-    <li>{% link_for _("Permissions manager"), request.endpoint %}</li>
-{% endblock breadcrumb_content %}
-
-{% block ap_content %}
+{% block primary_content_inner %}
     {% set registered_roles = h.get_registered_roles() %}
 
     <form action="" method="POST">
+        <div class="table-responsive">
+            <table class="table" style="table-layout: fixed;">
+                <thead>
+                    <tr>
+                        <th>{{ _("Permission") }}</th>
 
-        <table class="table collection-table" style="table-layout: fixed;">
-            <thead>
-                <tr>
-                    <th>{{ _("Permission") }}</th>
+                        {% for role_name, role_label in registered_roles.items() %}
+                            <th>{{ role_label }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
 
-                    {% for role_name, role_label in registered_roles.items() %}
-                        <th>{{ role_label }}</th>
-                    {% endfor %}
-                </tr>
-            </thead>
-
-            <tbody>
-                {% for perm_group in permission_groups %}
-                <tr>
-                    <td>
-                        <b>{{ perm_group.name }}</b>
-                    </td>
-                    <td colspan="{{ registered_roles | length }}">
-                        <i>{{ perm_group.description }}</i>
-                    </td>
-                </tr>
+                <tbody>
+                    {% for perm_group in permission_groups %}
+                    <tr>
+                        <td>
+                            <b>{{ perm_group.name }}</b>
+                        </td>
+                        <td colspan="{{ registered_roles | length }}">
+                            <i>{{ perm_group.description }}</i>
+                        </td>
+                    </tr>
 
 
-                    {% for permission in perm_group.permissions %}
-                        <tr>
-                            <td class="ps-4">
-                                <p class="m-0">{{ permission.label }}</p>
+                        {% for permission in perm_group.permissions %}
+                            <tr>
+                                <td class="ps-4">
+                                    <p class="m-0">{{ permission.label }}</p>
 
-                                {% if permission.description %}
-                                    <p class="m-0 mt-2"><i>{{ permission.description }}</i></p>
-                                {% endif %}
-                            </td>
-
-                            {% for role_id in registered_roles %}
-                                {% set key = h.ap_munge_string(permission.key) %}
-
-                                <td>
-                                    <div class="checkbox-wrapper">
-                                        <input type='hidden' value='unset' name='{{ permission.key }}|{{ role_id }}'>
-                                        <input type="checkbox" id="{{ role_id }}-{{ key }}" name="{{ permission.key }}|{{ role_id }}" value="set" {{ 'checked' if h.get_role_permissions(role_id, permission.key) }}/>
-                                        <label for="{{ role_id }}-{{ key }}" class="toggle">
-                                            <span></span>
-                                        </label>
-                                    </div>
+                                    {% if permission.description %}
+                                        <p class="m-0 mt-2"><i>{{ permission.description }}</i></p>
+                                    {% endif %}
                                 </td>
-                            {% endfor %}
-                        </tr>
-                    {% endfor %}
 
-                {% endfor %}
-            </tbody>
-        </table>
+                                {% for role_id in registered_roles %}
+                                    {% set key = h.permission_munge_string(permission.key) %}
+
+                                    <td>
+                                        <div class="checkbox-wrapper">
+                                            <input type='hidden' value='unset' name='{{ permission.key }}|{{ role_id }}'>
+                                            <input type="checkbox" id="{{ role_id }}-{{ key }}" name="{{ permission.key }}|{{ role_id }}" value="set" {{ 'checked' if h.get_role_permissions(role_id, permission.key) }}/>
+                                            <label for="{{ role_id }}-{{ key }}" class="toggle">
+                                                <span></span>
+                                            </label>
+                                        </div>
+                                    </td>
+                                {% endfor %}
+                            </tr>
+                        {% endfor %}
+
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
         <div class="form-actions">
             <button type="submit" class="btn btn-primary">{{ _("Save") }}</button>
         </div>
     </form>
-{% endblock ap_content %}
+{% endblock %}

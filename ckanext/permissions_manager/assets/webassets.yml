@@ -2,4 +2,16 @@ css:
   filter: cssrewrite
   output: ckanext-permissions/%(version)s-permission-manager.css
   contents:
-    - css/style.css
+  - css/vendor/tomselect.min.css
+  - css/style.css
+
+js:
+  filter: rjsmin
+  output: ckanext-permissions/%(version)s-permissions.js
+  contents:
+  - js/vendor/tomselect.min.js
+  - js/perm-tom-select.js
+  extra:
+    preload:
+    - base/main
+    - base/ckan

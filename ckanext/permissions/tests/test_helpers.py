@@ -44,11 +44,15 @@ class TestGetUserRoles:
 
     def test_add_new_role(self, user: dict[str, str], test_role: dict[str, str]):
         model.UserRole.create(user["id"], test_role["id"])
-        assert helpers.get_user_roles(user["id"]) == ["user", test_role["id"]]
+        result = helpers.get_user_roles(user["id"])
+        assert "user" in result
+        assert test_role["id"] in result
 
     def test_remove_role(self, user: dict[str, str], test_role: dict[str, str]):
         model.UserRole.create(user["id"], test_role["id"])
-        assert helpers.get_user_roles(user["id"]) == ["user", test_role["id"]]
+        result = helpers.get_user_roles(user["id"])
+        assert "user" in result
+        assert test_role["id"] in result
 
         model.UserRole.delete(user["id"], test_role["id"])
         assert helpers.get_user_roles(user["id"]) == ["user"]

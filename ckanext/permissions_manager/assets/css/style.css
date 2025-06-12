@@ -66,4 +66,30 @@
   display: none;
 }
 
+.row.wrapper.permissions-manager-wrapper:before {
+  display: none;
+}
+.row.wrapper.permissions-manager-wrapper .module-content {
+  padding: 1.5rem 1rem;
+}
+.row.wrapper.permissions-manager-wrapper .form-actions .btn {
+  flex-basis: unset;
+}
+
+.account-masthead .account .permissions-dropdown {
+  border: var(--bs-dropdown-border-width) solid var(--bs-dropdown-border-color);
+}
+.account-masthead .account .permissions-dropdown li {
+  width: 100%;
+  border: unset;
+}
+.account-masthead .account .permissions-dropdown li a {
+  font-weight: normal;
+  color: var(--bs-dropdown-link-color);
+}
+.account-masthead .account .permissions-dropdown li a:hover {
+  background-color: var(--bs-dropdown-link-hover-bg);
+  color: var(--bs-dropdown-link-color);
+}
+
 /*# sourceMappingURL=style.css.map */

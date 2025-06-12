@@ -6,5 +6,5 @@
     <p>{{ _("You can assign roles to users to control their access to this organization and its datasets.") }}</p>
     <p>{{ h.render_markdown(_("Roles assigned there will be considered **scoped** and specific to this organization.")) }}</p>
 
-    {% snippet 'perm_manager/user_roles_table.html', page=page, scope='organization:' + group_dict.id, group_dict=group_dict %}
+    {% snippet 'perm_manager/user_roles_table.html', page=page, scope='organization', group_dict=group_dict %}
 {% endblock %}

@@ -13,11 +13,10 @@ class PermissionLabels(p.SingletonPlugin, DefaultPermissionLabels):
     def get_dataset_labels(self, dataset_obj: model.Package) -> list[str]:
         labels: list[str] = super().get_dataset_labels(dataset_obj)
 
-        labels.append(
-            "permission-allowed-private"
-            if dataset_obj.private
-            else "permission-allowed"
-        )
+        labels.append("permission-allowed")
+
+        if dataset_obj.owner_org:
+            labels.append(f"permission-allowed-org:{dataset_obj.owner_org}")
 
         return labels
 
@@ -39,10 +38,8 @@ class PermissionLabels(p.SingletonPlugin, DefaultPermissionLabels):
 
         user = user_obj or model.AnonymousUser()
 
-        if perm_utils.check_permission("read_any_dataset", user):
-            labels.append("permission-allowed")
-
-        if perm_utils.check_permission("read_private_dataset", user):
-            labels.append("permission-allowed-private")
+        for permission in ["read_any_dataset", "read_private_dataset"]:
+            if perm_utils.check_permission(permission, user):
+                labels.append("permission-allowed")
 
         return labels

@@ -1,20 +1,24 @@
-{% extends 'admin_panel/base.html' %}
+{% extends 'perm_manager/base.html' %}
 
 {% import 'macros/form.html' as form %}
 
-{% block ap_main_class %} permissions-update-role {% endblock %}
-
 {% block breadcrumb_content %}
-    <li>{% link_for _("Update role"), request.endpoint, role_id=role.id %}</li>
+    <li class="active">
+        <a href="{{ h.url_for(request.endpoint, role_id=role.id) }}">
+            {{ _("Update role") }}
+        </a>
+    </li>
 {% endblock breadcrumb_content %}
 
-{% block ap_content %}
+{% block primary_content_inner %}
     <form action="" method="POST">
+        {{ h.csrf_input() }}
+
         <p class="form-label"><b>{{ _('ID') }}</b></p>
-        <p class="form-control">{{ role.id }}</p>
+        <p>{{ role.id }}</p>
 
         <p class="form-label"><b>{{ _('Label') }}</b></p>
-        <p class="form-control">{{ role.label }}</p>
+        <p>{{ role.label }}</p>
 
         {{ form.textarea('description', label=_('Description'), value=role.description, error=errors.description, attrs={"required": 1, "class": "form-control"}, is_required=True) }}
 
@@ -23,4 +27,4 @@
             <button type="submit" class="btn btn-primary">{{ _("Update") }}</button>
         </div>
     </form>
-{% endblock ap_content %}
+{% endblock primary_content_inner %}

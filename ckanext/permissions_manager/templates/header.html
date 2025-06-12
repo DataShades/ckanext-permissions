@@ -1,0 +1,33 @@
+{% ckan_extends %}
+
+{% block header_account_logged %}
+    {% if g.userobj.sysadmin %}
+        <li class="dropdown permissions-dropdown">
+            <a href="#" class="dropdown-toggle" data-bs-toggle="dropdown" title="Permissions">
+                <i class="fa fa-sitemap" aria-hidden="true"></i>
+            </a>
+            <ul class="dropdown-menu">
+                <li>
+                    <a class="dropdown-item" href="{{ h.url_for('perm_manager.permission_list') }}">
+                        <i class="fa fa-sitemap" aria-hidden="true"></i>
+                        {{ _("Permissions") }}
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="{{ h.url_for('perm_manager.role_list') }}">
+                        <i class="fa fa-user-shield" aria-hidden="true"></i>
+                        {{ _("Roles") }}
+                    </a>
+                </li>
+                <li>
+                    <a class="dropdown-item" href="{{ h.url_for('perm_manager.user_roles_list') }}">
+                        <i class="fa fa-users" aria-hidden="true"></i>
+                        {{ _("User Roles") }}
+                    </a>
+                </li>
+            </ul>
+        </li>
+    {% endif %}
+
+    {{ super() }}
+{% endblock %}
