@@ -8,6 +8,8 @@
     {% set registered_roles = h.get_registered_roles() %}
 
     <form action="" method="POST">
+        {{ h.csrf_input() }}
+
         <div class="table-responsive">
             <table class="table" style="table-layout: fixed;">
                 <thead>
