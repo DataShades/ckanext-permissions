@@ -26,7 +26,7 @@ def role_doesnt_exists(role: str) -> str:
     return role
 
 
-def role_exists(role: str) -> str:
+def permission_role_exists(role: str) -> str:
     """Ensure that a role exists.
 
     Args:
@@ -57,7 +57,7 @@ def roles_exists(roles: list[str]) -> list[str]:
         list of roles
     """
     for role in roles:
-        role_exists(role)
+        permission_role_exists(role)
 
     return roles
 

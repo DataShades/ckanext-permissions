@@ -99,7 +99,7 @@ def _validate_permission_data(data: DataDict) -> None:
                     "id": [
                         tk.get_validator("not_empty"),
                         tk.get_validator("unicode_safe"),
-                        tk.get_validator("role_exists"),
+                        tk.get_validator("permission_role_exists"),
                     ],
                 },
             )
