@@ -17,16 +17,18 @@ def role_create(
 
 
 @validator_args
-def role_delete(not_empty, unicode_safe, role_exists, not_default_role) -> types.Schema:
+def role_delete(
+    not_empty, unicode_safe, permission_role_exists, not_default_role
+) -> types.Schema:
     return {
-        "id": [not_empty, unicode_safe, role_exists, not_default_role],
+        "id": [not_empty, unicode_safe, permission_role_exists, not_default_role],
     }
 
 
 @validator_args
-def role_update(not_empty, unicode_safe, role_exists) -> types.Schema:
+def role_update(not_empty, unicode_safe, permission_role_exists) -> types.Schema:
     return {
-        "id": [not_empty, unicode_safe, role_exists],
+        "id": [not_empty, unicode_safe, permission_role_exists],
         "description": [not_empty, unicode_safe],
     }
 
