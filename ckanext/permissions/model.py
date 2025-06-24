@@ -114,8 +114,17 @@ class UserRole(tk.BaseModel):
         return user_role
 
     @classmethod
-    def clear_user_roles(cls, user_id: str) -> None:
-        model.Session.query(UserRole).filter(UserRole.user_id == user_id).delete()
+    def clear_user_roles(
+        cls, user_id: str, scope: str = "", scope_id: str | None = None
+    ) -> None:
+        perm = model.Session.query(UserRole).filter(UserRole.user_id == user_id)
+
+        if scope:
+            perm = perm.filter_by(scope=scope)
+            if scope_id:
+                perm = perm.filter_by(scope_id=scope_id)
+
+        perm.delete()
         model.Session.commit()
 
     @classmethod

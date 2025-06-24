@@ -266,7 +266,7 @@ class EditUserRole(MethodView):
                 extra_vars={"user": user, "data": data, "errors": errors},
             )
 
-        perm_model.UserRole.clear_user_roles(user.id)
+        perm_model.UserRole.clear_user_roles(user.id, scope, scope_id)
 
         for role in data["roles"]:
             perm_model.UserRole.create(
