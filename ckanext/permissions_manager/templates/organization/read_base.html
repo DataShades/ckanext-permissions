@@ -2,5 +2,7 @@
 
 {% block content_primary_nav %}
     {{ super() }}
-    {{ h.build_nav_icon('perm_manager.organization_user_roles_list', _('Roles'), org_id=group_dict.name, icon='user-friends') }}
+    {% if h.check_access('sysadmin') %}
+        {{ h.build_nav_icon('perm_manager.organization_user_roles_list', _('Roles'), org_id=group_dict.name, icon='user-friends') }}
+    {% endif %}
 {% endblock %}
