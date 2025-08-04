@@ -7,6 +7,7 @@ import ckanext.permissions.utils as perm_utils
 
 
 @tk.chained_auth_function
+@tk.auth_allow_anonymous_access
 def package_show(
     next_: types.AuthFunction,
     context: types.Context,
