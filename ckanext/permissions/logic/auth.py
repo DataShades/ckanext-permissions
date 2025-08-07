@@ -72,3 +72,15 @@ def resource_delete(
         return {"success": True}
 
     return next_(context, data_dict or {})
+
+
+def manage_user_roles(
+    context: types.Context, data_dict: types.DataDict
+) -> types.AuthResult:
+    return {"success": False}
+
+
+def manage_permissions(
+    context: types.Context, data_dict: types.DataDict
+) -> types.AuthResult:
+    return {"success": False}

@@ -15,19 +15,22 @@ from ckanext.permissions.logic import schema
 
 @validate(schema.role_create)
 def permission_role_create(context: Context, data_dict: DataDict) -> perm_types.Role:
+    tk.check_access("manage_user_roles", context, data_dict)
     return perm_model.Role.create(**data_dict).dictize(context)
 
 
 @validate(schema.role_delete)
 def permission_role_delete(context: Context, data_dict: DataDict) -> None:
-    role = perm_model.Role.get(data_dict["id"])
+    tk.check_access("manage_user_roles", context, data_dict)
 
-    if role:
+    if role := perm_model.Role.get(data_dict["id"]):
         role.delete()
 
 
 @validate(schema.role_update)
 def permission_role_update(context: Context, data_dict: DataDict) -> perm_types.Role:
+    tk.check_access("manage_user_roles", context, data_dict)
+
     role = cast(perm_model.Role, perm_model.Role.get(data_dict["id"]))
 
     role.update(data_dict["description"])
@@ -42,6 +45,8 @@ def permissions_update(context: Context, data_dict: DataDict) -> DataDict:
     Returns:
         A dictionary with the updated permissions and the missing permissions
     """
+    tk.check_access("manage_permissions", context, data_dict)
+
     _validate_permission_data(data_dict)
     registered_permissions = perm_utils.get_permissions()
 

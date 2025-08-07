@@ -18,6 +18,9 @@ log = logging.getLogger(__name__)
 perm_manager = Blueprint("perm_manager", __name__, url_prefix="/permissions")
 
 
+USER_ROLES_PER_PAGE = 10
+
+
 @perm_manager.before_request
 def before_request() -> None:
     try:
@@ -90,6 +93,8 @@ class RoleAdd(MethodView):
 
         try:
             tk.get_action("permission_role_create")({}, payload)
+        except tk.NotAuthorized as e:
+            return tk.abort(403, str(e))
         except tk.ValidationError as e:
             return tk.render(
                 "perm_manager/add_role.html",
@@ -153,6 +158,26 @@ class RoleEdit(MethodView):
 
 
 class BaseUserRolesList(MethodView):
+    def _get_user_with_roles(
+        self, scope: str = "global", scope_id: str | None = None
+    ) -> list[dict[str, Any]]:
+        """
+        Get all active users and their roles.
+        """
+        users = self._get_active_users()
+        result: list[dict[str, Any]] = []
+
+        for user in users:
+            result.append(
+                {
+                    "id": user.id,
+                    "display_name": user.display_name,
+                    "roles": tk.h.get_user_roles(user.id, scope, scope_id),
+                }
+            )
+
+        return self._apply_filters(result)
+
     def _get_active_users(self) -> list[model.User]:
         """
         Get all active users and sort them by display name.
@@ -166,63 +191,70 @@ class BaseUserRolesList(MethodView):
             key=lambda x: x.display_name,
         )
 
+    def _apply_filters(self, users: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """
+        Apply filters based on username and role.
+        """
+        q = tk.request.args.get("q", "").strip()
+        role_filter = tk.request.args.get("role", "").strip()
+
+        if q:
+            users = [
+                user
+                for user in users
+                if q.lower() in user["display_name"].lower()
+                or q.lower() in user["roles"]
+            ]
+
+        if role_filter:
+            users = [user for user in users if role_filter in user["roles"]]
+
+        return users
+
 
 class UserRolesList(BaseUserRolesList):
     def get(self) -> Union[str, Response]:
-        users = self._get_active_users()
-
-        return tk.render(
-            "perm_manager/user_roles_list.html",
-            extra_vars={
-                "page": Page(
-                    collection=users,
-                    page=tk.h.get_page_number(tk.request.args),
-                    url=tk.h.pager_url,
-                    item_count=len(users),
-                    items_per_page=int(tk.request.args.get("limit", 10)),
-                ),
-            },
+        users = self._get_user_with_roles()
+        page = Page(
+            collection=users,
+            page=tk.h.get_page_number(tk.request.args),
+            url=tk.h.pager_url,
+            item_count=len(users),
+            items_per_page=int(tk.request.args.get("limit", USER_ROLES_PER_PAGE)),
         )
+        return tk.render("perm_manager/user_roles_list.html", extra_vars={"page": page})
 
 
 class OrganizationUserRolesList(BaseUserRolesList):
     def get(self, org_id: str) -> Union[str, Response]:
-        users = self._get_active_users()
+        users = self._get_user_with_roles(scope="organization", scope_id=org_id)
         org_dict = _get_org_dict(org_id)
+
+        def _pager_url(**kwargs):
+            return tk.h.url_for(
+                "perm_manager.organization_user_roles_list", org_id=org_id, **kwargs
+            )
+
+        page = Page(
+            collection=users,
+            page=tk.h.get_page_number(tk.request.args),
+            url=_pager_url,
+            item_count=len(users),
+            items_per_page=int(tk.request.args.get("limit", USER_ROLES_PER_PAGE)),
+        )
 
         return tk.render(
             "perm_manager/organization/user_roles_list.html",
             extra_vars={
                 "group_dict": org_dict,
                 "group_type": "organization",
-                "page": Page(
-                    collection=users,
-                    page=tk.h.get_page_number(tk.request.args),
-                    url=tk.h.pager_url,
-                    item_count=len(users),
-                    items_per_page=int(tk.request.args.get("limit", 10)),
-                ),
+                "page": page,
             },
         )
 
 
 class EditUserRole(MethodView):
     def __init__(self):
-        # self.fields = [
-        #     {
-        #         "field_name": "roles",
-        #         "label": "Roles",
-        #         "help_text": "Select roles for the user",
-        #         "choices": [
-        #             {"value": role_id, "label": role_label}
-        #             for role_id, role_label in utils.get_registered_roles().items()
-        #         ],
-        #         "validators": "not_missing list_of_strings roles_exists",
-        #         "form_snippet": "tom_select.html",
-        #         "form_attrs": {"multiple": "true", "data-module-create": "false"},
-        #     }
-        # ]
-
         self.schema = {
             "roles": [
                 tk.get_validator(validator)
@@ -277,11 +309,12 @@ class EditUserRole(MethodView):
 
         tk.h.flash_success("User roles updated")
 
-        if scope == "global":
-            return tk.redirect_to("perm_manager.user_roles_list")
-
-        return tk.redirect_to(
-            "perm_manager.organization_user_roles_list", org_id=scope_id
+        return (
+            tk.redirect_to("perm_manager.user_roles_list")
+            if scope == "global"
+            else tk.redirect_to(
+                "perm_manager.organization_user_roles_list", org_id=scope_id
+            )
         )
 
 

@@ -2,7 +2,7 @@
 
 {% block content_primary_nav %}
     {{ super() }}
-    {% if h.check_access('sysadmin') %}
+    {% if h.check_access('manage_user_roles', {'org_id': group_dict.name}) %}
         {{ h.build_nav_icon('perm_manager.organization_user_roles_list', _('Roles'), org_id=group_dict.name, icon='user-friends') }}
     {% endif %}
 {% endblock %}

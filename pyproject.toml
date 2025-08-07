@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ckanext-permissions"
-version = "0.0.1"
+version = "0.1.0"
 description = "Permission system for CKAN"
 authors = [
     {name = "DataShades", email = "datashades@linkdigital.com.au"},
@@ -43,7 +43,7 @@ permissions_manager = "ckanext.permissions_manager.plugin:PermissionsManagerPlug
 find = {}
 
 [tool.black]
-# line-length = 88
+line-length = 120
 # preview = true
 
 [tool.ruff]

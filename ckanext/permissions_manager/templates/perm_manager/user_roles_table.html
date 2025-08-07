@@ -1,4 +1,38 @@
-<form action="" method="POST">
+<form>
+    <div class="row mb-4 g-3 align-items-end justify-content-md-end">
+        <div class="col-md-6">
+            <label for="q" class="form-label">{{ _('Search') }}</label>
+            <input
+                type="text"
+                id="q"
+                name="q"
+                class="form-control"
+                value="{{ request.args.get('q', '') }}"
+            >
+        </div>
+
+        <div class="col-md-6 col-lg-4">
+            <label for="role" class="form-label">{{ _('Role') }}</label>
+            <select name="role" id="role" class="form-select">
+                <option value="">{{ _('All Roles') }}</option>
+                {% for role in h.permission_get_registered_roles_options() %}
+                    <option value="{{ role.value }}" {% if request.args.get('role') == role.value %}selected{% endif %}>
+                        {{ role.text }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="col-md-3 col-lg-2 d-flex gap-3">
+            <button type="submit" class="btn btn-primary w-100 d-block">
+                {{ _('Filter') }}
+            </button>
+            <a href="{{ request.path }}" class="btn btn-danger w-100 d-block">
+                {{ _('Clear') }}
+            </a>
+        </div>
+    </div>
+
     <table class="table">
         <colgroup>
             <col style="width: 40%">
@@ -24,7 +58,7 @@
                         </a>
                     </td>
                     <td>
-                        {% for role in h.get_user_roles(user.id, scope, group_dict.id if group_dict else None) %}
+                        {% for role in user.roles %}
                             <span class="badge bg-success">{{ role }}</span>
                         {% endfor %}
                     </td>
@@ -45,6 +79,6 @@
         </tbody>
     </table>
 
-    {{ page.pager(q=q) }}
+    {{ page.pager(role=request.args.role, q=request.args.q) }}
 
 </form>
