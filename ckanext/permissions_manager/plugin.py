@@ -22,9 +22,7 @@ class PermissionsManagerPlugin(p.SingletonPlugin):
 
     def get_signal_subscriptions(self) -> types.SignalMapping:
         return {
-            tk.signals.ckanext.signal("ap_main:collect_config_sections"): [
-                self.collect_config_sections_subs
-            ],
+            tk.signals.ckanext.signal("ap_main:collect_config_sections"): [self.collect_config_sections_subs],
         }
 
     @staticmethod

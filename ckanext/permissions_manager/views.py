@@ -40,9 +40,7 @@ class PermissionManagerView(MethodView):
 
     def post(self) -> Response:
         try:
-            tk.get_action("permissions_update")(
-                {}, {"permissions": self._get_permissions()}
-            )
+            tk.get_action("permissions_update")({}, {"permissions": self._get_permissions()})
         except tk.ValidationError as e:
             tk.h.flash_error(str(e))
             return tk.redirect_to("perm_manager.permission_list")
@@ -158,9 +156,7 @@ class RoleEdit(MethodView):
 
 
 class BaseUserRolesList(MethodView):
-    def _get_user_with_roles(
-        self, scope: str = "global", scope_id: str | None = None
-    ) -> list[dict[str, Any]]:
+    def _get_user_with_roles(self, scope: str = "global", scope_id: str | None = None) -> list[dict[str, Any]]:
         """
         Get all active users and their roles.
         """
@@ -183,11 +179,7 @@ class BaseUserRolesList(MethodView):
         Get all active users and sort them by display name.
         """
         return sorted(
-            (
-                model.Session.query(model.User)
-                .filter(model.User.state == model.State.ACTIVE)
-                .all()
-            ),
+            (model.Session.query(model.User).filter(model.User.state == model.State.ACTIVE).all()),
             key=lambda x: x.display_name,
         )
 
@@ -199,12 +191,7 @@ class BaseUserRolesList(MethodView):
         role_filter = tk.request.args.get("role", "").strip()
 
         if q:
-            users = [
-                user
-                for user in users
-                if q.lower() in user["display_name"].lower()
-                or q.lower() in user["roles"]
-            ]
+            users = [user for user in users if q.lower() in user["display_name"].lower() or q.lower() in user["roles"]]
 
         if role_filter:
             users = [user for user in users if role_filter in user["roles"]]
@@ -231,9 +218,7 @@ class OrganizationUserRolesList(BaseUserRolesList):
         org_dict = _get_org_dict(org_id)
 
         def _pager_url(**kwargs):
-            return tk.h.url_for(
-                "perm_manager.organization_user_roles_list", org_id=org_id, **kwargs
-            )
+            return tk.h.url_for("perm_manager.organization_user_roles_list", org_id=org_id, **kwargs)
 
         page = Page(
             collection=users,
@@ -256,10 +241,7 @@ class OrganizationUserRolesList(BaseUserRolesList):
 class EditUserRole(MethodView):
     def __init__(self):
         self.schema = {
-            "roles": [
-                tk.get_validator(validator)
-                for validator in "not_missing list_of_strings roles_exists".split()
-            ]
+            "roles": [tk.get_validator(validator) for validator in "not_missing list_of_strings roles_exists".split()]
         }
 
     def get(self, user_id: str) -> Union[str, Response]:
@@ -280,9 +262,7 @@ class EditUserRole(MethodView):
     def post(self, user_id: str) -> Union[str, Response]:
         return self._update_user_roles(user_id, "global")
 
-    def _update_user_roles(
-        self, user_id: str, scope: str, scope_id: str | None = None
-    ) -> Union[str, Response]:
+    def _update_user_roles(self, user_id: str, scope: str, scope_id: str | None = None) -> Union[str, Response]:
         payload = {"roles": tk.request.form.getlist("roles")}
 
         user = model.User.get(user_id)
@@ -301,9 +281,7 @@ class EditUserRole(MethodView):
         perm_model.UserRole.clear_user_roles(user.id, scope, scope_id)
 
         for role in data["roles"]:
-            perm_model.UserRole.create(
-                user_id=user.id, role=role, scope=scope, scope_id=scope_id
-            )
+            perm_model.UserRole.create(user_id=user.id, role=role, scope=scope, scope_id=scope_id)
 
         model.Session.commit()
 
@@ -312,9 +290,7 @@ class EditUserRole(MethodView):
         return (
             tk.redirect_to("perm_manager.user_roles_list")
             if scope == "global"
-            else tk.redirect_to(
-                "perm_manager.organization_user_roles_list", org_id=scope_id
-            )
+            else tk.redirect_to("perm_manager.organization_user_roles_list", org_id=scope_id)
         )
 
 
@@ -332,11 +308,7 @@ class OrganizationEditUserRole(EditUserRole):
             "perm_manager/organization/edit_user_roles.html",
             extra_vars={
                 "user": user,
-                "data": {
-                    "roles": ",".join(
-                        tk.h.get_user_roles(user.id, scope, org_dict["id"])
-                    )
-                },
+                "data": {"roles": ",".join(tk.h.get_user_roles(user.id, scope, org_dict["id"]))},
                 "errors": {},
                 "group_dict": org_dict,
                 "group_type": scope,
@@ -351,16 +323,12 @@ def _get_org_dict(org_id: str) -> dict[str, Any]:
     context = types.Context(user=tk.current_user.name, for_view=True)
 
     try:
-        return tk.get_action("organization_show")(
-            context, {"id": org_id, "include_datasets": False}
-        )
+        return tk.get_action("organization_show")(context, {"id": org_id, "include_datasets": False})
     except (tk.ObjectNotFound, tk.NotAuthorized):
         tk.abort(404, tk._("Organization not found"))
 
 
-perm_manager.add_url_rule(
-    "/manage", view_func=PermissionManagerView.as_view("permission_list")
-)
+perm_manager.add_url_rule("/manage", view_func=PermissionManagerView.as_view("permission_list"))
 
 perm_manager.add_url_rule("/roles", view_func=RoleManagerView.as_view("role_list"))
 perm_manager.add_url_rule("/roles/add", view_func=RoleAdd.as_view("role_add"))
@@ -377,11 +345,7 @@ perm_manager.add_url_rule(
     view_func=OrganizationEditUserRole.as_view("organization_edit_user_role"),
 )
 
-perm_manager.add_url_rule(
-    "/user-roles", view_func=UserRolesList.as_view("user_roles_list")
-)
-perm_manager.add_url_rule(
-    "/user-roles/<user_id>", view_func=EditUserRole.as_view("edit_user_role")
-)
+perm_manager.add_url_rule("/user-roles", view_func=UserRolesList.as_view("user_roles_list"))
+perm_manager.add_url_rule("/user-roles/<user_id>", view_func=EditUserRole.as_view("edit_user_role"))
 
 blueprints = [perm_manager]

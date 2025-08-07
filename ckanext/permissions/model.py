@@ -59,14 +59,9 @@ class Role(tk.BaseModel):
 class UserRole(tk.BaseModel):
     __tablename__ = "perm_user_role"
 
-    user_id = Column(
-        String, ForeignKey("user.id", ondelete="CASCADE"), primary_key=True
-    )
-    role_id = Column(
-        String, ForeignKey("perm_role.id", ondelete="CASCADE"), primary_key=True
-    )
+    user_id = Column(String, ForeignKey("user.id", ondelete="CASCADE"), primary_key=True)
+    role_id = Column(String, ForeignKey("perm_role.id", ondelete="CASCADE"), primary_key=True)
 
-    # scope = Column(ARRAY(String), nullable=True, default=["global"])
     scope = Column(String, primary_key=True, default="global")
     scope_id = Column(String, nullable=True)
 
@@ -78,14 +73,8 @@ class UserRole(tk.BaseModel):
     role = relationship(Role, cascade="all, delete")
 
     @classmethod
-    def get(
-        cls, user_id: str, scope: str = "global", scope_id: str | None = None
-    ) -> list[Self]:
-        query: Query = (
-            model.Session.query(cls)
-            .filter(cls.user_id == user_id)
-            .filter(cls.scope == scope)
-        )
+    def get(cls, user_id: str, scope: str = "global", scope_id: str | None = None) -> list[Self]:
+        query: Query = model.Session.query(cls).filter(cls.user_id == user_id).filter(cls.scope == scope)
 
         if scope_id:
             query = query.filter(cls.scope_id == scope_id)
@@ -114,9 +103,7 @@ class UserRole(tk.BaseModel):
         return user_role
 
     @classmethod
-    def clear_user_roles(
-        cls, user_id: str, scope: str = "", scope_id: str | None = None
-    ) -> None:
+    def clear_user_roles(cls, user_id: str, scope: str = "", scope_id: str | None = None) -> None:
         perm = model.Session.query(UserRole).filter(UserRole.user_id == user_id)
 
         if scope:
@@ -129,9 +116,7 @@ class UserRole(tk.BaseModel):
 
     @classmethod
     def delete(cls, user_id: str, role: str) -> None:
-        model.Session.query(cls).filter(
-            cls.user_id == user_id, cls.role_id == role
-        ).delete()
+        model.Session.query(cls).filter(cls.user_id == user_id, cls.role_id == role).delete()
         model.Session.commit()
 
 
@@ -143,9 +128,7 @@ class RolePermission(tk.BaseModel):
 
     @classmethod
     def get(cls, role_id: str, permission: str) -> Self | None:
-        query: Query = model.Session.query(cls).filter(
-            cls.role_id == role_id, cls.permission == permission
-        )
+        query: Query = model.Session.query(cls).filter(cls.role_id == role_id, cls.permission == permission)
 
         return query.one_or_none()
 

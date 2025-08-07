@@ -107,9 +107,7 @@ class TestParsePermissionGroupsValidation:
                     "new_group": PermissionGroup(
                         name="xxx",
                         description="xxx",
-                        permissions=[
-                            PermissionDefinition(key="xxx", label="", description="xxx")
-                        ],
+                        permissions=[PermissionDefinition(key="xxx", label="", description="xxx")],
                     )
                 }
             )
@@ -120,9 +118,7 @@ class TestParsePermissionGroupsValidation:
                 "new_group": PermissionGroup(
                     name="xxx",
                     description="xxx",
-                    permissions=[
-                        PermissionDefinition(key="xxx", label="xxx", description="")
-                    ],
+                    permissions=[PermissionDefinition(key="xxx", label="xxx", description="")],
                 ),
             }
         )
@@ -170,9 +166,7 @@ class TestGetPermissions:
         result = utils.get_permissions()
 
         assert isinstance(result, dict)
-        assert result["perm_1"] == PermissionDefinition(
-            key="perm_1", label="Permission 1"
-        )
+        assert result["perm_1"] == PermissionDefinition(key="perm_1", label="Permission 1")
 
 
 @pytest.mark.usefixtures("with_plugins", "clean_db")

@@ -82,9 +82,7 @@ class TestPermissionRoleDelete:
 @pytest.mark.usefixtures("with_plugins", "clean_db")
 class TestPermissionRoleUpdate:
     def test_permission_role_update(self, test_role: dict[str, Any]):
-        result = call_action(
-            "permission_role_update", id=test_role["id"], description="New description"
-        )
+        result = call_action("permission_role_update", id=test_role["id"], description="New description")
 
         assert result["id"] == test_role["id"]
         assert result["description"] == "New description"

@@ -25,9 +25,7 @@ def get_role_permissions(role_id: str, permission: str) -> bool:
     return model.RolePermission.get(role_id, permission) is not None
 
 
-def get_user_roles(
-    user_id: str, scope: str = "global", scope_id: str | None = None
-) -> list[str]:
+def get_user_roles(user_id: str, scope: str = "global", scope_id: str | None = None) -> list[str]:
     """Get the roles of a user
 
     Args:

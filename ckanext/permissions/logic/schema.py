@@ -5,9 +5,7 @@ from ckan.logic.schema import validator_args
 
 
 @validator_args
-def role_create(
-    not_empty, unicode_safe, role_id_validator, role_doesnt_exists, ignore
-) -> types.Schema:
+def role_create(not_empty, unicode_safe, role_id_validator, role_doesnt_exists, ignore) -> types.Schema:
     return {
         "id": [not_empty, unicode_safe, role_id_validator, role_doesnt_exists],
         "label": [not_empty, unicode_safe],
@@ -17,9 +15,7 @@ def role_create(
 
 
 @validator_args
-def role_delete(
-    not_empty, unicode_safe, permission_role_exists, not_default_role
-) -> types.Schema:
+def role_delete(not_empty, unicode_safe, permission_role_exists, not_default_role) -> types.Schema:
     return {
         "id": [not_empty, unicode_safe, permission_role_exists, not_default_role],
     }

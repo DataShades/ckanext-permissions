@@ -83,21 +83,13 @@ def role_id_validator(value: str) -> str:
     name_match = re.compile(r"[a-z_\-]*$")
 
     if len(value) < perm_const.ROLE_ID_MIN_LENGTH:
-        raise tk.Invalid(
-            f"Role ID must be at least {perm_const.ROLE_ID_MIN_LENGTH} characters long."
-        )
+        raise tk.Invalid(f"Role ID must be at least {perm_const.ROLE_ID_MIN_LENGTH} characters long.")
 
     if len(value) > perm_const.ROLE_ID_MAX_LENGTH:
-        raise tk.Invalid(
-            "Role ID must be a maximum of "
-            f"{perm_const.ROLE_ID_MAX_LENGTH} characters long."
-        )
+        raise tk.Invalid(f"Role ID must be a maximum of {perm_const.ROLE_ID_MAX_LENGTH} characters long.")
 
     if not name_match.match(value):
-        raise tk.Invalid(
-            "Role ID must be purely lowercase alpha"
-            "(ascii) characters and these symbols: -_"
-        )
+        raise tk.Invalid("Role ID must be purely lowercase alpha(ascii) characters and these symbols: -_")
 
     return value
 

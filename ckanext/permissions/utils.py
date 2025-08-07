@@ -16,9 +16,7 @@ import ckanext.permissions.types as perm_types
 
 
 def parse_permission_group_schemas() -> dict[str, perm_types.PermissionGroup]:
-    groups = _load_schemas(
-        tk.aslist(tk.config.get("ckanext.permissions.permission_groups")), "name"
-    )
+    groups = _load_schemas(tk.aslist(tk.config.get("ckanext.permissions.permission_groups")), "name")
 
     validate_groups(groups)
 
@@ -48,7 +46,6 @@ def _load_schema(path: str):
     module, file_name = path.split(":", 1)
 
     try:
-        # __import__ has an odd signature
         imp_module = __import__(module, fromlist=[""])
     except ImportError:
         return
@@ -66,9 +63,7 @@ def validate_groups(groups: dict[str, perm_types.PermissionGroup]) -> bool:
     permissions = []
 
     for group in groups.values():
-        data, errors = tk.navl_validate(
-            cast(dict, group), perm_schema.permission_group_schema()
-        )
+        data, errors = tk.navl_validate(cast(dict, group), perm_schema.permission_group_schema())
 
         if errors:
             raise tk.ValidationError(errors)
@@ -81,9 +76,7 @@ def validate_groups(groups: dict[str, perm_types.PermissionGroup]) -> bool:
 
         for permission in data["permissions"]:
             if permission["key"] in permissions:
-                raise tk.ValidationError(
-                    f"Permission {permission['key']} is duplicated"
-                )
+                raise tk.ValidationError(f"Permission {permission['key']} is duplicated")
 
             permissions.append(permission["key"])
 
@@ -106,9 +99,7 @@ def get_registered_roles() -> dict[str, str]:
     return {role["id"]: role["label"] for role in perm_model.Role.all()}
 
 
-def check_permission(
-    permission: str, user: model.User | model.AnonymousUser, scope: str = "global"
-) -> bool:
+def check_permission(permission: str, user: model.User | model.AnonymousUser, scope: str = "global") -> bool:
     """Check if user has the given permission through any of their roles.
 
     Args:
@@ -119,10 +110,7 @@ def check_permission(
         bool: True if user has the permission, False otherwise
     """
     if isinstance(user, model.AnonymousUser):
-        return (
-            perm_model.RolePermission.get(perm_const.Roles.Anonymous.value, permission)
-            is not None
-        )
+        return perm_model.RolePermission.get(perm_const.Roles.Anonymous.value, permission) is not None
 
     for role in user.roles:  # type: ignore
         if scope not in role.scope:

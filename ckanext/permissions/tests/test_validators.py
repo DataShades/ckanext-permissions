@@ -28,9 +28,7 @@ class TestRoleDoesntExists:
 class TestRoleExists:
     def test_role_exists_valid(self, test_role: dict[str, str]):
         """Test permission_role_exists with existing role."""
-        assert (
-            perm_validators.permission_role_exists(test_role["id"]) == test_role["id"]
-        )
+        assert perm_validators.permission_role_exists(test_role["id"]) == test_role["id"]
 
     def test_role_exists_invalid(self):
         """Test permission_role_exists with non-existent role."""
