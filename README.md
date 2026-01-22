@@ -39,30 +39,33 @@ Compatibility with core CKAN versions:
 Using GIT Clone:
 
 1. Activate your CKAN virtual environment, for example:
+   ```bash
+   . /usr/lib/ckan/default/bin/activate
+   ```
 
-     . /usr/lib/ckan/default/bin/activate
+2. Clone the source and install it on the virtualenv:
+   ```bash
+   git clone https://github.com/DataShades/ckanext-permissions.git
+   cd ckanext-permissions
+   pip install -e .
+   ```
 
-2. Clone the source and install it on the virtualenv
-
-    git clone https://github.com/DataShades/ckanext-permissions.git
-
-    cd ckanext-permissions
-
-    pip install -e .
-
-3. Add `permissions permissions_manager` to the `ckan.plugins` setting in your CKAN
-   config file (by default the config file is located at
-   `/etc/ckan/default/ckan.ini`).
+3. Add `permissions permissions_manager` to the `ckan.plugins` setting in your CKAN config file (by default the config file is located at `/etc/ckan/default/ckan.ini`).
 
 4. Initialize DB tables:
-
-    ckan -c PATH_TO_CONFIG db upgrade
+   ```bash
+   ckan -c /etc/ckan/default/ckan.ini db upgrade -p permissions
+   ```
 
 5. Initialize default Roles and add Authenticated default role to all existing Users:
+   ```bash
+   ckan -c /etc/ckan/default/ckan.ini permissions assign-default-user-roles
+   ```
 
-    ckan -c PATH_TO_CONFIG permissions assign-default-user-roles
-
-7. Restart CKAN.
+6. Restart CKAN. For example:
+   ```bash
+   sudo supervisorctl restart ckan-uwsgi
+   ```
 
 
 ## Config settings

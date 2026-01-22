@@ -11,6 +11,7 @@ js:
   contents:
   - js/vendor/tomselect.min.js
   - js/perm-tom-select.js
+  - js/perm-search-permissions.js
   extra:
     preload:
     - base/main
