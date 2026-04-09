@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import inspect
+import logging
 import os
 from typing import cast
 
@@ -13,6 +14,8 @@ import ckanext.permissions.const as perm_const
 import ckanext.permissions.logic.schema as perm_schema
 import ckanext.permissions.model as perm_model
 import ckanext.permissions.types as perm_types
+
+log = logging.getLogger(__name__)
 
 
 def parse_permission_group_schemas() -> dict[str, perm_types.PermissionGroup]:
@@ -40,22 +43,22 @@ def _load_schemas(schemas: list[str], type_field: str):
 
 
 def _load_schema(path: str):
-    """
+    """Load permission schema by path.
+
     Given a path like "ckanext.permissions:default_group.yaml"
     find the second part relative to the import path of the first
     """
-
     module, file_name = path.split(":", 1)
 
     try:
         imp_module = __import__(module, fromlist=[""])
     except ImportError:
-        return
+        return None
 
     file_path = os.path.join(os.path.dirname(inspect.getfile(imp_module)), file_name)
 
     if not os.path.exists(file_path):
-        return
+        return None
 
     with open(file_path) as file:
         return yaml.safe_load(file)
@@ -90,13 +93,13 @@ def validate_groups(groups: dict[str, perm_types.PermissionGroup]) -> bool:
 
 
 def get_permission_groups() -> list[perm_types.PermissionGroup]:
-    from ckanext.permissions.plugin import PermissionsPlugin
+    from ckanext.permissions.plugin import PermissionsPlugin # noqa PLC0415
 
     return PermissionsPlugin._permissions_groups  # type: ignore
 
 
 def get_permissions() -> dict[str, perm_types.PermissionDefinition]:
-    from ckanext.permissions.plugin import PermissionsPlugin
+    from ckanext.permissions.plugin import PermissionsPlugin # noqa PLC0415
 
     return PermissionsPlugin._permissions  # type: ignore
 
@@ -113,6 +116,7 @@ def check_permission(
     Args:
         permission: The permission key to check
         user: The user to check permissions for
+        scope: The scope of the role
 
     Returns:
         bool: True if user has the permission, False otherwise
@@ -144,6 +148,14 @@ def assign_role_to_user(
         scope: The scope of the role
         scope_id: The scope ID of the role
     """
+    if not perm_model.Role.get(role_id):
+        log.warning(
+            "Cannot assign role '%s' to user '%s': role does not exist. "
+            "Run `ckan permissions init-default-roles` to create default roles.",
+            role_id,
+            user_id,
+        )
+        return
 
     scope_roles = perm_model.UserRole.get(user_id, scope, scope_id)
 
@@ -158,7 +170,6 @@ def remove_role_from_user(user_id: str, role_id: str):
         role_id: The role to remove
         user_id: The user to remove the role from
     """
-
     roles = perm_model.UserRole.get(user_id)
 
     if role_id in [role.role_id for role in roles]:
