@@ -1,13 +1,11 @@
 default_install_hook_types:
 - pre-commit
 - pre-push
-- commit-msg
 
 repos:
 - repo: https://github.com/pre-commit/pre-commit-hooks
-  rev: v4.4.0
+  rev: v5.0.0
   hooks:
-  # - id: check-yaml
   - id: end-of-file-fixer
     exclude: '\.css$'
     stages: [pre-commit]
@@ -16,24 +14,24 @@ repos:
   - id: debug-statements
     stages: [pre-push]
 
-## Isort
-- repo: https://github.com/pycqa/isort
-  rev: 5.12.0
-  hooks:
-  - id: isort
-    name: isort
-    stages: [pre-commit]
-
-## Black
-- repo: https://github.com/psf/black
-  rev: 23.3.0
-  hooks:
-  - id: black
-    stages: [pre-commit]
-
-## Ruff
-- repo: https://github.com/charliermarsh/ruff-pre-commit
-  rev: v0.0.260
+- repo: https://github.com/astral-sh/ruff-pre-commit
+  rev: v0.16.7
   hooks:
   - id: ruff
+    args: [--fix]
     stages: [pre-commit]
+  - id: ruff-format
+    stages: [pre-commit]
+
+# pyright needs CKAN installed to resolve imports, so it runs with the active
+# interpreter instead of an isolated pre-commit env. Manual only until the
+# existing errors are fixed: pre-commit run pyright --hook-stage manual
+- repo: local
+  hooks:
+  - id: pyright
+    name: pyright
+    entry: bash -c 'pyright --pythonpath="$(command -v python)"'
+    language: system
+    types: [python]
+    pass_filenames: false
+    stages: [manual]
