@@ -10,6 +10,7 @@ import ckan.plugins.toolkit as tk
 from ckan import model, types
 from ckan.lib.helpers import Page
 
+from ckanext.permissions import const as perm_const
 from ckanext.permissions import model as perm_model
 from ckanext.permissions import utils
 
@@ -155,7 +156,9 @@ class RoleEdit(MethodView):
 
 
 class BaseUserRolesList(MethodView):
-    def _get_user_with_roles(self, scope: str = "global", scope_id: str | None = None) -> list[dict[str, Any]]:
+    def _get_user_with_roles(
+        self, scope: str = perm_const.SCOPE_GLOBAL, scope_id: str | None = None
+    ) -> list[dict[str, Any]]:
         """Get all active users and their roles."""
         result: list[dict[str, Any]] = [
             {
@@ -204,7 +207,7 @@ class UserRolesList(BaseUserRolesList):
 
 class OrganizationUserRolesList(BaseUserRolesList):
     def get(self, org_id: str) -> str | Response:
-        users = self._get_user_with_roles(scope="organization", scope_id=org_id)
+        users = self._get_user_with_roles(scope=perm_const.SCOPE_ORGANIZATION, scope_id=org_id)
         org_dict = _get_org_dict(org_id)
 
         def _pager_url(**kwargs: Any) -> str:
@@ -250,7 +253,7 @@ class EditUserRole(MethodView):
         )
 
     def post(self, user_id: str) -> str | Response:
-        return self._update_user_roles(user_id, "global")
+        return self._update_user_roles(user_id, perm_const.SCOPE_GLOBAL)
 
     def _update_user_roles(self, user_id: str, scope: str, scope_id: str | None = None) -> str | Response:
         payload = {"roles": tk.request.form.getlist("roles")}
@@ -279,7 +282,7 @@ class EditUserRole(MethodView):
 
         return (
             tk.redirect_to("perm_manager.user_roles_list")
-            if scope == "global"
+            if scope == perm_const.SCOPE_GLOBAL
             else tk.redirect_to("perm_manager.organization_user_roles_list", org_id=scope_id)
         )
 
@@ -292,7 +295,7 @@ class OrganizationEditUserRole(EditUserRole):
             return tk.abort(404, "User not found")
 
         org_dict = _get_org_dict(org_id)
-        scope = "organization"
+        scope = perm_const.SCOPE_ORGANIZATION
 
         return tk.render(
             "perm_manager/organization/edit_user_roles.html",
@@ -306,7 +309,7 @@ class OrganizationEditUserRole(EditUserRole):
         )
 
     def post(self, org_id: str, user_id: str) -> str | Response:
-        return self._update_user_roles(user_id, "organization", org_id)
+        return self._update_user_roles(user_id, perm_const.SCOPE_ORGANIZATION, org_id)
 
 
 def _get_org_dict(org_id: str) -> dict[str, Any]:

@@ -195,10 +195,10 @@ class TestCheckPermission:
             "permissions_update",
             permissions={"perm_1": {test_role["id"]: True}},
         )
-        perm_model.UserRole.create(user.id, test_role["id"], "organization", org["id"])
+        perm_model.UserRole.create(user.id, test_role["id"], const.SCOPE_ORGANIZATION, org["id"])
 
-        assert utils.check_permission("perm_1", user, "organization", org["id"])
-        assert not utils.check_permission("perm_1", user, "organization", other_org["id"])
+        assert utils.check_permission("perm_1", user, const.SCOPE_ORGANIZATION, org["id"])
+        assert not utils.check_permission("perm_1", user, const.SCOPE_ORGANIZATION, other_org["id"])
         assert not utils.check_permission("perm_1", user, "org", org["id"])
         assert not utils.check_permission("perm_1", user)
 
@@ -262,9 +262,9 @@ class TestAssignRoleToUser:
         user = user_factory()
         org = organization_factory()
 
-        utils.assign_role_to_user(user["id"], const.Roles.Administrator.value, "organization", org["id"])
+        utils.assign_role_to_user(user["id"], const.Roles.Administrator.value, const.SCOPE_ORGANIZATION, org["id"])
 
-        org_roles = perm_model.UserRole.get(user["id"], "organization", org["id"])
+        org_roles = perm_model.UserRole.get(user["id"], const.SCOPE_ORGANIZATION, org["id"])
         global_roles = perm_model.UserRole.get(user["id"])
 
         assert [role.role_id for role in org_roles] == [const.Roles.Administrator.value]
@@ -310,9 +310,11 @@ class TestRemoveRoleFromUser:
         admin = const.Roles.Administrator.value
 
         utils.assign_role_to_user(user["id"], admin)
-        utils.assign_role_to_user(user["id"], admin, "organization", org["id"])
+        utils.assign_role_to_user(user["id"], admin, const.SCOPE_ORGANIZATION, org["id"])
 
         utils.remove_role_from_user(user["id"], admin)
 
+        org_roles = perm_model.UserRole.get(user["id"], const.SCOPE_ORGANIZATION, org["id"])
+
         assert admin not in [role.role_id for role in perm_model.UserRole.get(user["id"])]
-        assert [role.role_id for role in perm_model.UserRole.get(user["id"], "organization", org["id"])] == [admin]
+        assert [role.role_id for role in org_roles] == [admin]

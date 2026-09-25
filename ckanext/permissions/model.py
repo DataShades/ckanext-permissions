@@ -9,6 +9,7 @@ from typing_extensions import Self
 from ckan import model, types
 from ckan.plugins import toolkit as tk
 
+import ckanext.permissions.const as perm_const
 import ckanext.permissions.types as perm_types
 
 log = logging.getLogger(__name__)
@@ -61,7 +62,7 @@ class UserRole(tk.BaseModel):
     user_id = Column(String, ForeignKey("user.id", ondelete="CASCADE"), primary_key=True)
     role_id = Column(String, ForeignKey("perm_role.id", ondelete="CASCADE"), primary_key=True)
 
-    scope = Column(String, primary_key=True, default="global")
+    scope = Column(String, primary_key=True, default=perm_const.SCOPE_GLOBAL)
     scope_id = Column(String, nullable=True)
 
     user = relationship(
@@ -72,7 +73,7 @@ class UserRole(tk.BaseModel):
     role = relationship(Role, cascade="all, delete")
 
     @classmethod
-    def get(cls, user_id: str, scope: str = "global", scope_id: str | None = None) -> list[Self]:
+    def get(cls, user_id: str, scope: str = perm_const.SCOPE_GLOBAL, scope_id: str | None = None) -> list[Self]:
         query: Query = model.Session.query(cls).filter(cls.user_id == user_id).filter(cls.scope == scope)
 
         if scope_id:
@@ -85,7 +86,7 @@ class UserRole(tk.BaseModel):
         cls,
         user_id: str,
         role: str,
-        scope: str = "global",
+        scope: str = perm_const.SCOPE_GLOBAL,
         scope_id: str | None = None,
     ) -> Self:
         query: Query = model.Session.query(cls).filter(cls.user_id == user_id, cls.role_id == role, cls.scope == scope)
@@ -116,7 +117,7 @@ class UserRole(tk.BaseModel):
         model.Session.commit()
 
     @classmethod
-    def delete(cls, user_id: str, role: str, scope: str = "global", scope_id: str | None = None) -> None:
+    def delete(cls, user_id: str, role: str, scope: str = perm_const.SCOPE_GLOBAL, scope_id: str | None = None) -> None:
         query: Query = model.Session.query(cls).filter(cls.user_id == user_id, cls.role_id == role, cls.scope == scope)
 
         if scope_id:

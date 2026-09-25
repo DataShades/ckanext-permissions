@@ -105,7 +105,7 @@ def get_registered_roles() -> dict[str, str]:
 def check_permission(
     permission: str,
     user: model.User | model.AnonymousUser,
-    scope: str = "global",
+    scope: str = perm_const.SCOPE_GLOBAL,
     scope_id: str | None = None,
 ) -> bool:
     """Check if user has the given permission through any of their roles.
@@ -132,7 +132,7 @@ def check_permission(
     return False
 
 
-def assign_role_to_user(user_id: str, role_id: str, scope: str = "global", scope_id: str | None = None):
+def assign_role_to_user(user_id: str, role_id: str, scope: str = perm_const.SCOPE_GLOBAL, scope_id: str | None = None):
     """Assign role to an User.
 
     Args:
@@ -153,7 +153,9 @@ def assign_role_to_user(user_id: str, role_id: str, scope: str = "global", scope
     perm_model.UserRole.create(user_id, role_id, scope, scope_id)
 
 
-def remove_role_from_user(user_id: str, role_id: str, scope: str = "global", scope_id: str | None = None):
+def remove_role_from_user(
+    user_id: str, role_id: str, scope: str = perm_const.SCOPE_GLOBAL, scope_id: str | None = None
+):
     """Remove role from an User.
 
     Args:

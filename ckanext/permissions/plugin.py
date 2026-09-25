@@ -60,4 +60,4 @@ class PermissionsPlugin(implementation.PermissionLabels, p.SingletonPlugin):
         if action_name != "user_create":
             return
 
-        utils.assign_role_to_user(result["id"], perm_const.Roles.Authenticated.value, "global")
+        utils.assign_role_to_user(result["id"], perm_const.Roles.Authenticated.value, perm_const.SCOPE_GLOBAL)
