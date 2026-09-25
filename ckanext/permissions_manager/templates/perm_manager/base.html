@@ -21,9 +21,30 @@
         {% block primary %}
             <div class="primary col-12" role="main">
                 {% block primary_content %}
-                    <div class="module-content">
-                        {% block primary_content_inner %}{% endblock %}
-                    </div>
+                    <article class="module">
+                        <header class="bg-transparent page-header pt-2">
+                            <ul class="nav nav-tabs">
+                                {% set tabs = [
+                                    ("perm_manager.permission_list", _("Permissions"), "sitemap", ["perm_manager.permission_list"]),
+                                    ("perm_manager.role_list", _("Roles"), "user-shield", ["perm_manager.role_list", "perm_manager.role_add", "perm_manager.role_edit"]),
+                                    ("perm_manager.user_roles_list", _("User roles"), "users", ["perm_manager.user_roles_list", "perm_manager.edit_user_role"]),
+                                ] %}
+
+                                {% for endpoint, label, icon, endpoints in tabs %}
+                                    <li{% if request.endpoint in endpoints %} class="active"{% endif %}>
+                                        <a href="{{ h.url_for(endpoint) }}"{% if request.endpoint in endpoints %} aria-current="page"{% endif %}>
+                                            <i class="fa fa-{{ icon }}" aria-hidden="true"></i>
+                                            {{ label }}
+                                        </a>
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </header>
+
+                        <div class="module-content">
+                            {% block primary_content_inner %}{% endblock %}
+                        </div>
+                    </article>
                 {% endblock %}
             </div>
         {% endblock %}

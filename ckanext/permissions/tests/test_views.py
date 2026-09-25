@@ -1,4 +1,5 @@
 import logging
+import re
 
 import pytest
 
@@ -245,3 +246,32 @@ class TestForms:
         assert "Requires:" in body
         assert 'data-permission="update_any_dataset"' in body
         assert 'data-depends-on="read_any_dataset"' in body
+
+
+@pytest.mark.ckan_config("ckan.plugins", "permissions permissions_manager")
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestNavigation:
+    def test_header_has_single_permissions_link(self, app, sysadmin):
+        body = app.get(tk.h.url_for("home.index"), headers={"Authorization": sysadmin["token"]}, status=200).body
+
+        assert f'href="{tk.h.url_for("perm_manager.permission_list")}"' in body
+        assert "permissions-dropdown" not in body
+
+    @pytest.mark.parametrize(
+        ("endpoint", "active_tab"),
+        [
+            ("perm_manager.permission_list", "perm_manager.permission_list"),
+            ("perm_manager.role_list", "perm_manager.role_list"),
+            ("perm_manager.role_add", "perm_manager.role_list"),
+            ("perm_manager.role_edit", "perm_manager.role_list"),
+            ("perm_manager.user_roles_list", "perm_manager.user_roles_list"),
+            ("perm_manager.edit_user_role", "perm_manager.user_roles_list"),
+        ],
+    )
+    def test_active_tab(self, app, sysadmin, page_url, endpoint, active_tab):
+        body = app.get(page_url(endpoint), headers={"Authorization": sysadmin["token"]}, status=200).body
+
+        tabs = body.split('<ul class="nav nav-tabs">', 1)[1].split("</ul>", 1)[0]
+        active = re.findall(r'<li class="active">\s*<a href="([^"]+)"', tabs)
+
+        assert active == [tk.h.url_for(active_tab)]
