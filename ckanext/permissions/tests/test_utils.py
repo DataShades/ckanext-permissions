@@ -301,3 +301,18 @@ class TestRemoveRoleFromUser:
         role_ids = [role.role_id for role in user_roles]
         assert const.Roles.Administrator.value not in role_ids
         assert const.Roles.Authenticated.value in role_ids
+
+    def test_remove_role_keeps_other_scopes(self, user_factory, organization_factory):
+        from ckanext.permissions import model as perm_model
+
+        user = user_factory()
+        org = organization_factory()
+        admin = const.Roles.Administrator.value
+
+        utils.assign_role_to_user(user["id"], admin)
+        utils.assign_role_to_user(user["id"], admin, "organization", org["id"])
+
+        utils.remove_role_from_user(user["id"], admin)
+
+        assert admin not in [role.role_id for role in perm_model.UserRole.get(user["id"])]
+        assert [role.role_id for role in perm_model.UserRole.get(user["id"], "organization", org["id"])] == [admin]

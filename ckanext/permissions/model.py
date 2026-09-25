@@ -116,8 +116,13 @@ class UserRole(tk.BaseModel):
         model.Session.commit()
 
     @classmethod
-    def delete(cls, user_id: str, role: str) -> None:
-        model.Session.query(cls).filter(cls.user_id == user_id, cls.role_id == role).delete()
+    def delete(cls, user_id: str, role: str, scope: str = "global", scope_id: str | None = None) -> None:
+        query: Query = model.Session.query(cls).filter(cls.user_id == user_id, cls.role_id == role, cls.scope == scope)
+
+        if scope_id:
+            query = query.filter(cls.scope_id == scope_id)
+
+        query.delete()
         model.Session.commit()
 
 
