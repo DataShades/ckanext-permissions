@@ -22,6 +22,21 @@ The extension provides a way to assign roles to users. Roles could be global and
 
 ![role-assignment.png](doc/role-assignment.png)
 
+### Default permissions
+
+| Permission             | Grants                                              |
+| ---------------------- | --------------------------------------------------- |
+| `read_any_dataset`     | View any dataset, including private ones            |
+| `read_private_dataset` | View private datasets                               |
+| `update_any_dataset`   | Edit any dataset                                    |
+| `delete_any_dataset`   | Delete any dataset                                  |
+| `delete_any_resource`  | Delete any resource                                 |
+
+A permission granted through a global role applies to every dataset. Through a role scoped to an organization, it applies only to that organization's datasets. The permissions add access on top of CKAN's own rules; they never take it away.
+
+> [!CAUTION]
+> Permissions given to the `anonymous` role apply to everyone, including visitors who are not logged in. Giving it `update_any_dataset`, `delete_any_dataset` or `delete_any_resource` lets anyone edit or delete every dataset.
+
 
 ## Requirements
 
@@ -76,7 +91,47 @@ Using GIT Clone:
 
 ## Config settings
 
-TBD
+```ini
+# Permission group files to load, as `<module>:<path relative to the module>`.
+# Separate multiple files with spaces or new lines.
+# (optional, default: ckanext.permissions:default_group.yaml)
+ckanext.permissions.permission_groups =
+    ckanext.permissions:default_group.yaml
+    ckanext.myext:permissions.yaml
+```
+
+Setting this option replaces the default list, so include `ckanext.permissions:default_group.yaml` to keep the default permissions. A file whose module can't be imported or whose path doesn't exist is skipped silently.
+
+### Permission group format
+
+Each file defines one group of permissions, shown as a section on the permissions page:
+
+```yaml
+name: My extension
+description: Permissions for my extension
+permissions:
+  - key: approve_dataset
+    label: Approve dataset
+    description: User can approve datasets  # optional
+```
+
+`name`, `description` and at least one permission are required, and every permission needs a `key` and a `label`. Keys must be unique across all loaded groups. Invalid groups stop CKAN from starting.
+
+Your extension checks its own permissions with `ckanext.permissions.utils.check_permission(key, user)`, or `check_package_permission(key, user, package)` to include roles scoped to the dataset's organization.
+
+
+## CLI
+
+```bash
+# Create the default roles (anonymous, authenticated, administrator) if they are missing
+ckan -c /etc/ckan/default/ckan.ini permissions init-default-roles
+
+# Create the default roles, then give ROLE (default: authenticated) to every active user
+ckan -c /etc/ckan/default/ckan.ini permissions assign-default-user-roles [ROLE]
+
+# Remove the global ROLE (default: authenticated) from the given users, or from all users
+ckan -c /etc/ckan/default/ckan.ini permissions remove-role-from-users [ROLE] [-u USER_ID ...]
+```
 
 
 ## Tests
