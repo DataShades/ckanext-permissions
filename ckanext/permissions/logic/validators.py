@@ -1,11 +1,15 @@
 from __future__ import annotations
 
 import re
+from typing import Any
 
 import ckan.plugins.toolkit as tk
+from ckan import model, types
+from ckan.logic import validators as core_validators
 
 import ckanext.permissions.const as perm_const
 import ckanext.permissions.model as perm_model
+import ckanext.permissions.utils as perm_utils
 
 
 def role_doesnt_exists(role: str) -> str:
@@ -110,3 +114,23 @@ def not_default_role(role_id: str) -> str:
         raise tk.Invalid(f"Role {role_id} is a default role.")
 
     return role_id
+
+
+def owner_org_validator(
+    key: types.FlattenKey, data: types.FlattenDataDict, errors: types.FlattenErrorDict, context: types.Context
+) -> Any:
+    """Allow the `create_dataset` permission to pick the dataset's organization.
+
+    Core checks the organization membership directly instead of `package_create` auth,
+    so the permission has to be honored here too.
+    """
+    value = data.get(key)
+    organization = model.Group.get(value) if isinstance(value, str) and value else None
+
+    if organization and organization.is_organization and not context.get("ignore_auth"):
+        user = model.User.get(context.get("user")) or model.AnonymousUser()
+
+        if perm_utils.check_organization_permission("create_dataset", user, organization.id):
+            context = types.Context(context, ignore_auth=True)
+
+    return core_validators.owner_org_validator(key, data, errors, context)

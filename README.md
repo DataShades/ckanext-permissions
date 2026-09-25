@@ -24,20 +24,30 @@ The extension provides a way to assign roles to users. Roles could be global and
 
 ### Default permissions
 
-| Permission             | Grants                                   | Requires             |
-| ---------------------- | ---------------------------------------- | -------------------- |
-| `read_any_dataset`     | View any dataset, including private ones |                      |
-| `read_private_dataset` | View private datasets                    |                      |
-| `update_any_dataset`   | Edit any dataset                         | `read_any_dataset`   |
-| `delete_any_dataset`   | Delete any dataset                       | `read_any_dataset`   |
-| `delete_any_resource`  | Delete any resource                      | `update_any_dataset` |
+| Permission                     | Grants                                                                        | Requires                                   |
+| ------------------------------ | ----------------------------------------------------------------------------- | ------------------------------------------ |
+| `read_any_dataset`             | View any dataset, including private ones                                      |                                            |
+| `read_private_dataset`         | View private datasets                                                         |                                            |
+| `update_any_dataset`           | Edit any dataset                                                              | `read_any_dataset`                         |
+| `delete_any_dataset`           | Delete any dataset                                                            | `read_any_dataset`                         |
+| `delete_any_resource`          | Delete any resource                                                           | `update_any_dataset`                       |
+| `create_dataset`               | Create datasets in any organization                                           |                                            |
+| `purge_dataset`                | Permanently remove deleted datasets (API only)                                | `delete_any_dataset`                       |
+| `manage_dataset_collaborators` | Add and remove dataset collaborators, except themselves                       | `read_any_dataset`                         |
+| `bulk_update_datasets`         | Make public, make private or delete datasets in bulk on the organization page | `update_any_dataset`, `delete_any_dataset` |
+| `manage_organization_members`  | Add, change and remove organization members, except admins and themselves     |                                            |
+| `create_organization`          | Create organizations, becoming their admin                                    |                                            |
+| `create_group`                 | Create groups, becoming their admin                                           |                                            |
+| `manage_any_group`             | Edit any group, manage its members and add or remove its datasets             |                                            |
 
-A role can only be given a permission if it also has the permissions it requires, because CKAN needs them to carry out the action: editing and deleting a dataset in the UI first load it as the user, and deleting a resource is saved as an update of its dataset.
+A role can only be given a permission if it also has the permissions it requires. Most requirements exist because CKAN needs them to carry out the action: editing and deleting a dataset in the UI first load it as the user, and deleting a resource is saved as an update of its dataset. `purge_dataset` and `bulk_update_datasets` require the permissions whose effect they include, so a role can't bulk-delete or purge datasets it can't delete one by one.
 
-A permission granted through a global role applies to every dataset. Through a role scoped to an organization, it applies only to that organization's datasets. The permissions add access on top of CKAN's own rules; they never take it away.
+A permission granted through a global role applies to every dataset. Through a role scoped to an organization, it applies only to that organization's datasets. `create_organization`, `create_group` and `manage_any_group` don't belong to an organization, so they only work through a global role. `create_organization` and `create_group` only matter when `ckan.auth.user_create_organizations` or `ckan.auth.user_create_groups` is off; otherwise every logged-in user can already create them. CKAN turns `user_create_groups` on by default. The permissions add access on top of CKAN's own rules; they never take it away.
+
+To stop users from raising their own access, `manage_dataset_collaborators` can't add the user themselves as a collaborator, and `manage_organization_members` can't change the user's own membership, grant the `admin` role, or change or remove an existing admin.
 
 > [!CAUTION]
-> Permissions given to the `anonymous` role apply to everyone, including visitors who are not logged in. Giving it `update_any_dataset`, `delete_any_dataset` or `delete_any_resource` lets anyone edit or delete every dataset.
+> Permissions given to the `anonymous` role apply to everyone, including visitors who are not logged in. Giving it `update_any_dataset`, `delete_any_dataset` or `delete_any_resource` lets anyone edit or delete every dataset, and `create_dataset` lets anyone create datasets. The other permissions have no effect on the `anonymous` role, because CKAN requires a logged-in user for those actions.
 
 
 ## Requirements

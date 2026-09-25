@@ -181,13 +181,31 @@ def check_package_permission(
     Returns:
         bool: True if user has the permission, False otherwise
     """
+    return check_organization_permission(permission, user, package.owner_org if package else None)
+
+
+def check_organization_permission(
+    permission: str,
+    user: model.User | model.AnonymousUser,
+    organization_id: str | None,
+) -> bool:
+    """Check if user has the given permission globally or in the organization.
+
+    Args:
+        permission: The permission key to check
+        user: The user to check permissions for
+        organization_id: The ID of the organization the permission applies to
+
+    Returns:
+        bool: True if user has the permission, False otherwise
+    """
     if check_permission(permission, user):
         return True
 
-    if not package or not package.owner_org:
+    if not organization_id:
         return False
 
-    return check_permission(permission, user, perm_const.SCOPE_ORGANIZATION, package.owner_org)
+    return check_permission(permission, user, perm_const.SCOPE_ORGANIZATION, organization_id)
 
 
 def get_permission_scope_ids(

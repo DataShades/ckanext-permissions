@@ -217,8 +217,12 @@ class TestGetPermissions:
         assert utils.get_permission_dependencies("missing") == []
 
     def test_get_permission_dependents(self):
-        assert utils.get_permission_dependents("read_any_dataset") == ["update_any_dataset", "delete_any_dataset"]
-        assert utils.get_permission_dependents("update_any_dataset") == ["delete_any_resource"]
+        assert utils.get_permission_dependents("read_any_dataset") == [
+            "update_any_dataset",
+            "delete_any_dataset",
+            "manage_dataset_collaborators",
+        ]
+        assert utils.get_permission_dependents("update_any_dataset") == ["delete_any_resource", "bulk_update_datasets"]
         assert utils.get_permission_dependents("delete_any_resource") == []
 
 

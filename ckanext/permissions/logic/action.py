@@ -5,9 +5,11 @@ from typing import cast
 
 import ckan.plugins.toolkit as tk
 from ckan import model
+from ckan.lib.dictization import model_dictize
 from ckan.logic import validate
-from ckan.types import Context, DataDict
+from ckan.types import Action, Context, DataDict
 
+from ckanext.permissions import const as perm_const
 from ckanext.permissions import model as perm_model
 from ckanext.permissions import types as perm_types
 from ckanext.permissions import utils as perm_utils
@@ -171,3 +173,76 @@ def _validate_permission_data(data: DataDict) -> None:
 
             if errors:
                 raise tk.ValidationError(errors)
+
+
+@tk.chained_action
+def organization_list_for_user(next_: Action, context: Context, data_dict: DataDict) -> list[DataDict]:
+    """Add the organizations where the user can create datasets through the `create_dataset` permission.
+
+    The dataset form picks its organizations from this action.
+    """
+    organizations = next_(context, data_dict)
+
+    if data_dict.get("permission") != "create_dataset":
+        return organizations
+
+    user = model.User.get(data_dict.get("id") or context.get("user"))
+
+    if not user or user.sysadmin:
+        return organizations
+
+    query = model.Session.query(model.Group).filter(
+        model.Group.is_organization == True,
+        model.Group.state == model.State.ACTIVE,
+        model.Group.id.notin_([organization["id"] for organization in organizations]),
+    )
+
+    if not perm_utils.check_permission("create_dataset", user):
+        scope_ids = perm_utils.get_permission_scope_ids(["create_dataset"], user, perm_const.SCOPE_ORGANIZATION)
+        query = query.filter(model.Group.id.in_(scope_ids))
+
+    extra = model_dictize.group_list_dictize(
+        query.all(),
+        Context(context, with_capacity=False),
+        with_package_counts=tk.asbool(data_dict.get("include_dataset_count")),
+        with_member_counts=tk.asbool(data_dict.get("include_member_count")),
+    )
+
+    return sorted([*organizations, *extra], key=lambda organization: tk.h.strxfrm(organization["display_name"]))
+
+
+@tk.chained_action
+def group_list_authz(next_: Action, context: Context, data_dict: DataDict) -> list[DataDict]:
+    """List every group for users with the `manage_any_group` permission, as core does for sysadmins.
+
+    The dataset's Groups page picks its groups from this action.
+    """
+    user = model.User.get(context.get("user"))
+
+    if (
+        not user
+        or user.sysadmin
+        or tk.asbool(data_dict.get("am_member"))
+        or not perm_utils.check_permission("manage_any_group", user)
+    ):
+        return next_(context, data_dict)
+
+    tk.check_access("group_list_authz", context, data_dict)
+
+    groups = (
+        model.Session.query(model.Group)
+        .filter(model.Group.is_organization == False, model.Group.state == model.State.ACTIVE)
+        .all()
+    )
+
+    package = context.get("package")
+
+    if tk.asbool(data_dict.get("available_only")) and package:
+        groups = list(set(groups) - set(package.get_groups()))
+
+    return model_dictize.group_list_dictize(
+        groups,
+        context,
+        with_package_counts=tk.asbool(data_dict.get("include_dataset_count")),
+        with_member_counts=tk.asbool(data_dict.get("include_member_count")),
+    )

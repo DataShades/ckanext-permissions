@@ -190,3 +190,187 @@ class TestOrganizationScopedSearch:
         )
 
         assert [pkg["id"] for pkg in result["results"]] == [dataset["id"]]
+
+
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestCreateDataset:
+    def test_auth_scoped_to_organization(self, org_scoped_user, organization_factory):
+        user, org = org_scoped_user("create_dataset")
+
+        assert call_auth("package_create", {"user": user["name"]}, owner_org=org["id"])
+        assert call_auth("package_create", {"user": user["name"]})
+
+        with pytest.raises(tk.NotAuthorized):
+            call_auth("package_create", {"user": user["name"]}, owner_org=organization_factory()["id"])
+
+    def test_create_action(self, org_scoped_user):
+        user, org = org_scoped_user("create_dataset")
+
+        dataset = call_action(
+            "package_create", {"user": user["name"], "ignore_auth": False}, name="new-dataset", owner_org=org["name"]
+        )
+
+        assert dataset["owner_org"] == org["id"]
+
+    def test_organization_list_for_user(self, org_scoped_user, organization_factory):
+        user, org = org_scoped_user("create_dataset")
+        organization_factory()
+
+        result = call_action(
+            "organization_list_for_user", {"user": user["name"]}, id=user["id"], permission="create_dataset"
+        )
+
+        assert [organization["id"] for organization in result] == [org["id"]]
+
+
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestPurgeDataset:
+    def test_scoped_to_organization(self, org_scoped_user, dataset_factory, organization_factory):
+        user, org = org_scoped_user("purge_dataset")
+
+        assert call_auth("dataset_purge", {"user": user["name"]}, id=dataset_factory(owner_org=org["id"])["id"])
+
+        with pytest.raises(tk.NotAuthorized):
+            call_auth(
+                "dataset_purge",
+                {"user": user["name"]},
+                id=dataset_factory(owner_org=organization_factory()["id"])["id"],
+            )
+
+
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestManageDatasetCollaborators:
+    def test_manage_other_users(self, org_scoped_user, dataset_factory, user_factory):
+        user, org = org_scoped_user("manage_dataset_collaborators")
+        dataset = dataset_factory(owner_org=org["id"])
+        other = user_factory()
+        context = {"user": user["name"]}
+
+        assert call_auth("package_collaborator_create", context, id=dataset["id"], user_id=other["id"])
+        assert call_auth("package_collaborator_delete", context, id=dataset["id"], user_id=other["id"])
+        assert call_auth("package_collaborator_list", context, id=dataset["id"])
+
+    def test_cannot_add_themselves(self, org_scoped_user, dataset_factory):
+        user, org = org_scoped_user("manage_dataset_collaborators")
+        dataset = dataset_factory(owner_org=org["id"])
+
+        with pytest.raises(tk.NotAuthorized):
+            call_auth("package_collaborator_create", {"user": user["name"]}, id=dataset["id"], user_id=user["id"])
+
+    def test_scoped_to_organization(self, org_scoped_user, dataset_factory, organization_factory):
+        user, _org = org_scoped_user("manage_dataset_collaborators")
+        dataset = dataset_factory(owner_org=organization_factory()["id"])
+
+        with pytest.raises(tk.NotAuthorized):
+            call_auth("package_collaborator_list", {"user": user["name"]}, id=dataset["id"])
+
+
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestBulkUpdateDatasets:
+    @pytest.mark.parametrize("auth", ["bulk_update_private", "bulk_update_public", "bulk_update_delete"])
+    def test_scoped_to_organization(self, org_scoped_user, organization_factory, auth):
+        user, org = org_scoped_user("bulk_update_datasets")
+
+        assert call_auth(auth, {"user": user["name"]}, org_id=org["id"])
+        assert call_auth(auth, {"user": user["name"]}, org_id=org["name"])
+
+        with pytest.raises(tk.NotAuthorized):
+            call_auth(auth, {"user": user["name"]}, org_id=organization_factory()["id"])
+
+
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestManageOrganizationMembers:
+    def test_add_and_remove_member(self, org_scoped_user, user_factory):
+        user, org = org_scoped_user("manage_organization_members")
+        other = user_factory()
+        context = {"user": user["name"], "ignore_auth": False}
+
+        call_action("organization_member_create", context, id=org["id"], username=other["name"], role="editor")
+        assert call_auth("group_edit_permissions", {"user": user["name"]}, id=org["id"])
+
+        call_action("organization_member_delete", context, id=org["id"], username=other["name"])
+
+    @pytest.mark.parametrize(("target", "role"), [("other", "admin"), ("self", "editor")])
+    def test_cannot_escalate(self, org_scoped_user, user_factory, target, role):
+        user, org = org_scoped_user("manage_organization_members")
+        username = user["name"] if target == "self" else user_factory()["name"]
+
+        with pytest.raises(tk.NotAuthorized):
+            call_action(
+                "organization_member_create",
+                {"user": user["name"], "ignore_auth": False},
+                id=org["id"],
+                username=username,
+                role=role,
+            )
+
+    def test_cannot_remove_admin(self, org_scoped_user, user_factory):
+        user, org = org_scoped_user("manage_organization_members")
+        admin = user_factory()
+        call_action("organization_member_create", id=org["id"], username=admin["name"], role="admin")
+
+        with pytest.raises(tk.NotAuthorized):
+            call_action(
+                "organization_member_delete",
+                {"user": user["name"], "ignore_auth": False},
+                id=org["id"],
+                username=admin["name"],
+            )
+
+    def test_scoped_to_organization(self, org_scoped_user, user_factory, organization_factory):
+        user, _org = org_scoped_user("manage_organization_members")
+
+        with pytest.raises(tk.NotAuthorized):
+            call_action(
+                "organization_member_create",
+                {"user": user["name"], "ignore_auth": False},
+                id=organization_factory()["id"],
+                username=user_factory()["name"],
+                role="member",
+            )
+
+
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestGroupPermissions:
+    @pytest.mark.ckan_config("ckan.auth.user_create_organizations", False)
+    @pytest.mark.ckan_config("ckan.auth.user_create_groups", False)
+    @pytest.mark.parametrize(
+        ("auth", "permission"),
+        [("organization_create", "create_organization"), ("group_create", "create_group")],
+    )
+    def test_create(self, global_user, user_factory, auth, permission):
+        user = global_user(permission)
+
+        assert call_auth(auth, {"user": user["name"]})
+
+        with pytest.raises(tk.NotAuthorized):
+            call_auth(auth, {"user": user_factory()["name"]})
+
+    def test_manage_any_group(self, global_user, group_factory, organization_factory, dataset_factory):
+        user = global_user("manage_any_group")
+        group = group_factory()
+        context = {"user": user["name"]}
+
+        assert call_auth("group_update", context, id=group["id"])
+        assert call_auth("member_create", context, id=group["id"], object_type="package")
+
+        with pytest.raises(tk.NotAuthorized):
+            call_auth("organization_update", context, id=organization_factory()["id"])
+
+        dataset = dataset_factory()
+        call_action(
+            "member_create",
+            {"user": user["name"], "ignore_auth": False},
+            id=group["id"],
+            object=dataset["id"],
+            object_type="package",
+            capacity="public",
+        )
+
+        assert [g["id"] for g in call_action("group_list_authz", context)] == [group["id"]]
+
+    def test_org_scoped_role_does_not_grant(self, org_scoped_user, group_factory):
+        user, _org = org_scoped_user("manage_any_group")
+
+        with pytest.raises(tk.NotAuthorized):
+            call_auth("group_update", {"user": user["name"]}, id=group_factory()["id"])

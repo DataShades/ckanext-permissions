@@ -26,3 +26,42 @@ permissions:
     description: User can delete any resource
     depends_on:
       - update_any_dataset
+
+  - key: create_dataset
+    label: Create dataset
+    description: User can create datasets in any organization
+
+  - key: purge_dataset
+    label: Purge dataset
+    description: User can permanently remove any deleted dataset
+    depends_on:
+      - delete_any_dataset
+
+  - key: manage_dataset_collaborators
+    label: Manage dataset collaborators
+    description: User can add and remove collaborators on any dataset, except themselves
+    depends_on:
+      - read_any_dataset
+
+  - key: bulk_update_datasets
+    label: Bulk update datasets
+    description: User can make public, make private or delete datasets in bulk on the organization page
+    depends_on:
+      - update_any_dataset
+      - delete_any_dataset
+
+  - key: manage_organization_members
+    label: Manage organization members
+    description: User can add, change and remove organization members, except admins and themselves
+
+  - key: create_organization
+    label: Create organization
+    description: User can create organizations and becomes their admin
+
+  - key: create_group
+    label: Create group
+    description: User can create groups and becomes their admin
+
+  - key: manage_any_group
+    label: Manage any group
+    description: User can edit any group, manage its members and add or remove its datasets
