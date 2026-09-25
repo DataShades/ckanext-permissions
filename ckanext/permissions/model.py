@@ -65,7 +65,7 @@ class UserRole(tk.BaseModel):
     role_id = Column(String, ForeignKey("perm_role.id", ondelete="CASCADE"), primary_key=True)
 
     scope = Column(String, primary_key=True, default=perm_const.SCOPE_GLOBAL)
-    scope_id = Column(String, nullable=True)
+    scope_id = Column(String, primary_key=True, default="", server_default="")
 
     user = relationship(
         model.User,
@@ -104,7 +104,7 @@ class UserRole(tk.BaseModel):
         cls, user_id: str, permission: str, scope: str = perm_const.SCOPE_GLOBAL, scope_id: str | None = None
     ) -> bool:
         query = cls._with_permissions(user_id, [permission], scope)
-        query = query.filter(cls.scope_id == scope_id) if scope_id else query.filter(cls.scope_id.is_(None))
+        query = query.filter(cls.scope_id == (scope_id or ""))
 
         return bool(model.Session.query(query.exists()).scalar())
 
@@ -112,7 +112,7 @@ class UserRole(tk.BaseModel):
     def get_scope_ids_with_permissions(cls, user_id: str, permissions: list[str], scope: str) -> set[str]:
         query = (
             cls._with_permissions(user_id, permissions, scope)
-            .filter(cls.scope_id.isnot(None))
+            .filter(cls.scope_id != "")
             .with_entities(cls.scope_id)
             .distinct()
         )
@@ -144,7 +144,7 @@ class UserRole(tk.BaseModel):
         if existing := query.first():
             return existing
 
-        user_role = cls(user_id=user_id, role_id=role, scope=scope, scope_id=scope_id)
+        user_role = cls(user_id=user_id, role_id=role, scope=scope, scope_id=scope_id or "")
 
         model.Session.add(user_role)
 

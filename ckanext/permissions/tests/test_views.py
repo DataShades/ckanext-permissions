@@ -68,6 +68,24 @@ class TestInvalidInput:
         user_roles = perm_model.UserRole.get(user["id"], const.SCOPE_ORGANIZATION, organization["id"])
         assert [role.role_id for role in user_roles] == [const.Roles.Administrator.value]
 
+    def test_org_user_roles_same_role_in_second_org(self, app, sysadmin, user, organization_factory):
+        admin = const.Roles.Administrator.value
+        orgs = [organization_factory(), organization_factory()]
+
+        for org in orgs:
+            url = tk.h.url_for("perm_manager.organization_edit_user_role", org_id=org["id"], user_id=user["id"])
+            app.post(
+                url,
+                data={"roles": [admin]},
+                headers={"Authorization": sysadmin["token"]},
+                follow_redirects=False,
+                status=302,
+            )
+
+        for org in orgs:
+            user_roles = perm_model.UserRole.get(user["id"], const.SCOPE_ORGANIZATION, org["id"])
+            assert [role.role_id for role in user_roles] == [admin]
+
 
 @pytest.mark.ckan_config("ckan.plugins", "permissions permissions_manager")
 @pytest.mark.usefixtures("with_plugins", "clean_db")

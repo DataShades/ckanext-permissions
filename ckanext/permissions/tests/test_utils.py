@@ -270,6 +270,20 @@ class TestAssignRoleToUser:
         assert [role.role_id for role in org_roles] == [const.Roles.Administrator.value]
         assert const.Roles.Administrator.value not in [role.role_id for role in global_roles]
 
+    def test_assign_same_role_in_two_organizations(self, user_factory, organization_factory):
+        from ckanext.permissions import model as perm_model
+
+        user = user_factory()
+        admin = const.Roles.Administrator.value
+        orgs = [organization_factory(), organization_factory()]
+
+        for org in orgs:
+            utils.assign_role_to_user(user["id"], admin, const.SCOPE_ORGANIZATION, org["id"])
+
+        for org in orgs:
+            org_roles = perm_model.UserRole.get(user["id"], const.SCOPE_ORGANIZATION, org["id"])
+            assert [role.role_id for role in org_roles] == [admin]
+
 
 @pytest.mark.usefixtures("with_plugins", "clean_db")
 class TestRemoveRoleFromUser:
