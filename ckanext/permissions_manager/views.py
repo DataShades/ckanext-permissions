@@ -19,6 +19,7 @@ perm_manager = Blueprint("perm_manager", __name__, url_prefix="/permissions")
 
 
 USER_ROLES_PER_PAGE = 10
+USER_ROLES_MAX_PER_PAGE = 100
 
 
 @perm_manager.before_request
@@ -57,7 +58,7 @@ class PermissionManagerView(MethodView):
                 continue
 
             values = tk.request.form.getlist(key)
-            permission, role_id = key.split("|")
+            permission, _, role_id = key.partition("|")
 
             if permission not in permissions:
                 permissions[permission] = {}
@@ -87,8 +88,6 @@ class RoleAdd(MethodView):
     def post(self) -> str | Response:
         payload = dict(tk.request.form)
 
-        tk.get_or_bust(payload, ["id", "label", "description"])
-
         try:
             tk.get_action("permission_role_create")({}, payload)
         except tk.NotAuthorized as e:
@@ -108,8 +107,6 @@ class RoleDelete(MethodView):
     def post(self) -> Response:
         payload = dict(tk.request.form)
 
-        tk.get_or_bust(payload, ["id"])
-
         try:
             tk.get_action("permission_role_delete")({}, payload)
         except tk.ValidationError as e:
@@ -124,27 +121,26 @@ class RoleEdit(MethodView):
     def get(self, role_id: str) -> str | Response:
         return tk.render(
             "perm_manager/edit_role.html",
-            extra_vars={"role": perm_model.Role.get(role_id), "errors": {}, "data": {}},
+            extra_vars={"role": _get_role(role_id), "errors": {}, "data": {}},
         )
 
     def post(self, role_id: str) -> str | Response:
+        role = _get_role(role_id)
         payload = dict(tk.request.form)
-
-        tk.get_or_bust(payload, "description")
 
         try:
             tk.get_action("permission_role_update")(
                 {},
                 {
                     "id": role_id,
-                    "description": payload["description"],
+                    "description": payload.get("description"),
                 },
             )
         except tk.ValidationError as e:
             return tk.render(
                 "perm_manager/edit_role.html",
                 extra_vars={
-                    "role": perm_model.Role.get(role_id),
+                    "role": role,
                     "errors": e.error_dict,
                     "data": payload,
                 },
@@ -200,15 +196,15 @@ class UserRolesList(BaseUserRolesList):
             page=tk.h.get_page_number(tk.request.args),
             url=tk.h.pager_url,
             item_count=len(users),
-            items_per_page=int(tk.request.args.get("limit", USER_ROLES_PER_PAGE)),
+            items_per_page=_get_limit(),
         )
         return tk.render("perm_manager/user_roles_list.html", extra_vars={"page": page})
 
 
 class OrganizationUserRolesList(BaseUserRolesList):
     def get(self, org_id: str) -> str | Response:
-        users = self._get_user_with_roles(scope=perm_const.SCOPE_ORGANIZATION, scope_id=org_id)
         org_dict = _get_org_dict(org_id)
+        users = self._get_user_with_roles(scope=perm_const.SCOPE_ORGANIZATION, scope_id=org_dict["id"])
 
         def _pager_url(**kwargs: Any) -> str:
             return tk.h.url_for("perm_manager.organization_user_roles_list", org_id=org_id, **kwargs)
@@ -218,7 +214,7 @@ class OrganizationUserRolesList(BaseUserRolesList):
             page=tk.h.get_page_number(tk.request.args),
             url=_pager_url,
             item_count=len(users),
-            items_per_page=int(tk.request.args.get("limit", USER_ROLES_PER_PAGE)),
+            items_per_page=_get_limit(),
         )
 
         return tk.render(
@@ -309,7 +305,27 @@ class OrganizationEditUserRole(EditUserRole):
         )
 
     def post(self, org_id: str, user_id: str) -> str | Response:
-        return self._update_user_roles(user_id, perm_const.SCOPE_ORGANIZATION, org_id)
+        org_dict = _get_org_dict(org_id)
+
+        return self._update_user_roles(user_id, perm_const.SCOPE_ORGANIZATION, org_dict["id"])
+
+
+def _get_limit() -> int:
+    try:
+        limit = tk.asint(tk.request.args.get("limit", USER_ROLES_PER_PAGE))
+    except ValueError:
+        return USER_ROLES_PER_PAGE
+
+    return min(max(limit, 1), USER_ROLES_MAX_PER_PAGE)
+
+
+def _get_role(role_id: str) -> perm_model.Role:
+    role = perm_model.Role.get(role_id)
+
+    if not role:
+        tk.abort(404, tk._("Role not found"))
+
+    return role
 
 
 def _get_org_dict(org_id: str) -> dict[str, Any]:
