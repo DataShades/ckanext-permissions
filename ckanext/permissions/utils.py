@@ -316,7 +316,7 @@ def ensure_default_roles() -> int:
         (
             "administrator",
             "Administrator",
-            "Administrator that should have all permissions",
+            "Role for portal administrators. It has no permissions until they are granted on the permissions page",
         ),
     ]
 

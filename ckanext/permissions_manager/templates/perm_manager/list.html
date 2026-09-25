@@ -28,24 +28,27 @@
         </div>
     </div>
 
-    <form action="" method="POST">
+    <form action="" method="POST" data-module="perm-permission-matrix">
         {{ h.csrf_input() }}
 
-        <div class="table-responsive">
-            <table class="table" id="permissions-table" style="table-layout: fixed;" data-module="perm-permission-dependencies">
+        <div class="perm-cascade-notice alert alert-info d-none" role="status" aria-live="polite"></div>
+
+        <div class="perm-matrix">
+            <table class="table" id="permissions-table" data-module="perm-permission-dependencies">
                 <thead>
                     <tr>
-                        <th>{{ _("Permission") }}</th>
+                        <th class="perm-matrix-name">{{ _("Permission") }}</th>
 
                         {% for role_name, role_label in registered_roles.items() %}
-                            <th>{{ role_label }}</th>
+                            <th class="perm-matrix-role">{{ role_label }}</th>
                         {% endfor %}
                     </tr>
                 </thead>
 
                 <tbody>
                     {% for perm_group in permission_groups %}
-                    <tr>
+                    {% set group_index = loop.index %}
+                    <tr class="perm-group-row" data-group="{{ group_index }}">
                         <td>
                             <b>{{ perm_group.name }}</b>
                         </td>
@@ -56,7 +59,7 @@
 
 
                         {% for permission in perm_group.permissions %}
-                            <tr>
+                            <tr class="perm-permission-row" data-group="{{ group_index }}" data-search="{{ permission.label }} {{ permission.key }} {{ permission.description or '' }}">
                                 <td class="ps-4">
                                     <p class="m-0">{{ permission.label }}</p>
 
@@ -72,28 +75,43 @@
                                     {% endif %}
                                 </td>
 
-                                {% for role_id in registered_roles %}
+                                {% for role_id, role_label in registered_roles.items() %}
                                     {% set key = h.permission_munge_string(permission.key) %}
-                                    {% set blocked = h.is_permission_blocked_for_role(permission.key, role_id) %}
                                     <td>
-                                        <div class="checkbox-wrapper" {% if blocked %}title="{{ _('Can\'t be given to this role') }}"{% endif %}>
-                                            <input type='hidden' value='unset' name='{{ permission.key }}|{{ role_id }}'>
-                                            <input type="checkbox" id="{{ role_id }}-{{ key }}" name="{{ permission.key }}|{{ role_id }}" value="set" data-permission="{{ permission.key }}" data-role="{{ role_id }}" data-depends-on="{{ (permission.depends_on or []) | join(' ') }}" {{ 'disabled' if blocked else 'checked' if h.get_role_permissions(role_id, permission.key) }}/>
-                                            <label for="{{ role_id }}-{{ key }}" class="toggle">
-                                                <span></span>
-                                            </label>
-                                        </div>
+                                        <input type="hidden" value="unset" name="{{ permission.key }}|{{ role_id }}">
+
+                                        {% if h.is_permission_blocked_for_role(permission.key, role_id) %}
+                                            <span class="perm-blocked text-muted" title="{{ _('Can\'t be given to this role') }}">
+                                                <i class="fa fa-lock" aria-hidden="true"></i>
+                                                {{ _("Not allowed") }}
+                                            </span>
+                                        {% else %}
+                                            <div class="checkbox-wrapper">
+                                                <input type="checkbox" id="{{ role_id }}-{{ key }}" name="{{ permission.key }}|{{ role_id }}" value="set" data-permission="{{ permission.key }}" data-permission-label="{{ permission.label }}" data-role="{{ role_id }}" data-role-label="{{ role_label }}" data-depends-on="{{ (permission.depends_on or []) | join(' ') }}" {{ 'checked' if h.get_role_permissions(role_id, permission.key) }}/>
+                                                <label for="{{ role_id }}-{{ key }}" class="toggle">
+                                                    <span></span>
+                                                </label>
+                                            </div>
+                                        {% endif %}
                                     </td>
                                 {% endfor %}
                             </tr>
                         {% endfor %}
 
                     {% endfor %}
+
+                    <tr class="perm-no-results d-none">
+                        <td colspan="{{ (registered_roles | length) + 1 }}" class="text-center text-muted">
+                            {{ _("No permissions match your search.") }}
+                        </td>
+                    </tr>
                 </tbody>
             </table>
         </div>
 
-        <div class="form-actions">
+        <div class="form-actions perm-matrix-actions">
+            <span class="perm-unsaved-count text-muted me-auto" aria-live="polite"></span>
+            <button type="reset" class="btn btn-outline-primary">{{ _("Discard changes") }}</button>
             <button type="submit" class="btn btn-primary">{{ _("Save") }}</button>
         </div>
     </form>

@@ -1,0 +1,64 @@
+$cell-bg: var(--bs-body-bg, #fff);
+
+.perm-matrix {
+    max-height: 70vh;
+    overflow: auto;
+
+    .table {
+        margin-bottom: 0;
+    }
+
+    thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background-color: $cell-bg;
+    }
+
+    th.perm-matrix-name,
+    tbody td:first-child {
+        position: sticky;
+        left: 0;
+        z-index: 1;
+        min-width: 18rem;
+        background-color: $cell-bg;
+    }
+
+    thead th.perm-matrix-name {
+        z-index: 3;
+    }
+
+    th.perm-matrix-role {
+        min-width: 8rem;
+    }
+
+    td.perm-changed {
+        background-color: rgba(79, 46, 220, 0.08);
+    }
+
+    td.perm-cascaded {
+        animation: perm-cascaded 2s ease-out;
+    }
+}
+
+.perm-blocked {
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.perm-matrix-actions {
+    position: sticky;
+    bottom: 0;
+    z-index: 3;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 0;
+    background-color: $cell-bg;
+}
+
+@keyframes perm-cascaded {
+    from {
+        background-color: rgba(255, 193, 7, 0.45);
+    }
+}

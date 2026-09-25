@@ -1,3 +1,5 @@
+{% set role_labels = h.get_registered_roles() %}
+
 <form>
     <div class="row mb-4 g-3 align-items-end justify-content-md-end">
         <div class="col-md-6">
@@ -31,7 +33,21 @@
                 {{ _('Clear') }}
             </a>
         </div>
+
+        {% if scope == 'organization' %}
+            <div class="col-12">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" name="all" value="1" id="all-users" {% if h.asbool(request.args.get('all')) %}checked{% endif %}>
+                    <label class="form-check-label" for="all-users">{{ _('Show all portal users') }}</label>
+                </div>
+                <div class="form-text">
+                    {{ _('By default, only members of this organization and users who already have a role in it are listed.') }}
+                </div>
+            </div>
+        {% endif %}
     </div>
+
+    <p class="form-text">{{ _('Only active users with an email address are listed.') }}</p>
 
     <table class="table">
         <colgroup>
@@ -59,7 +75,11 @@
                     </td>
                     <td>
                         {% for role in user.roles %}
-                            <span class="badge bg-success">{{ role }}</span>
+                            {% if h.is_default_role(role) %}
+                                <span class="badge bg-black">{{ role_labels.get(role, role) }}</span>
+                            {% else %}
+                                <span class="badge bg-success">{{ role_labels.get(role, role) }}</span>
+                            {% endif %}
                         {% endfor %}
                     </td>
                     <td>
@@ -79,6 +99,6 @@
         </tbody>
     </table>
 
-    {{ page.pager(role=request.args.role, q=request.args.q) }}
+    {{ page.pager(role=request.args.role, q=request.args.q, all=request.args.all) }}
 
 </form>

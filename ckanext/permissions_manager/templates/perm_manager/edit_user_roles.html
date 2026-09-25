@@ -12,7 +12,13 @@
 {% endblock breadcrumb_content %}
 
 {% block primary_content_inner %}
-    <form action="" method="POST">
+    <form
+        action=""
+        method="POST"
+        data-module="perm-confirm-role-removal"
+        data-module-role="authenticated"
+        data-module-message="{{ _('Remove the Authenticated role? It is only assigned when a user is created, so this user loses baseline access until it is added back.') }}"
+    >
         {{ h.csrf_input() }}
 
         <p>

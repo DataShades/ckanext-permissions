@@ -34,6 +34,9 @@
                         <tr>
                             <td>
                                 {{ role.label }}
+                                {% if h.is_default_role(role.id) %}
+                                    <span class="badge bg-black" title="{{ _('Built-in role, it can\'t be deleted') }}">{{ _("System") }}</span>
+                                {% endif %}
                                 <pre class="m-0">{{ role.id }}</pre>
                             </td>
                             <td>
@@ -44,21 +47,27 @@
                                     {% if not h.is_default_role(role.id) %}
                                         <form action="{{ h.url_for('perm_manager.role_delete') }}" method="POST">
                                             {{ h.csrf_input() }}
+                                            <input type="hidden" name="id" value="{{ role.id }}">
+
+                                            {% set users = ungettext('{count} user', '{count} users', user_counts.get(role.id, 0)).format(count=user_counts.get(role.id, 0)) %}
+                                            {% set grants = ungettext('{count} permission', '{count} permissions', permission_counts.get(role.id, 0)).format(count=permission_counts.get(role.id, 0)) %}
 
                                             <button
-                                                type="submit" name="id" value="{{ role.id }}"
+                                                type="submit"
                                                 class="btn btn-danger"
-                                                data-module="ap-confirm-action"
-                                                data-module-content="{{ _('Are you sure you want to delete the role?') }}"
+                                                aria-label="{{ _('Delete role') }}"
+                                                title="{{ _('Delete role') }}"
+                                                data-module="confirm-action"
                                                 data-module-with-data="true"
+                                                data-module-content="{{ _('Delete the role \"{label}\"? It is assigned to {users} and grants {permissions}. Those assignments and grants are removed too, and this can\'t be undone.').format(label=role.label, users=users, permissions=grants) }}"
                                                 >
-                                                <i class="fas fa-trash"></i>
+                                                <i class="fas fa-trash" aria-hidden="true"></i>
                                             </button>
                                         </form>
                                     {% endif %}
 
-                                    <a href="{{ url_for('perm_manager.role_edit', role_id=role.id) }}" class="btn btn-primary">
-                                        <i class="fas fa-edit"></i>
+                                    <a href="{{ url_for('perm_manager.role_edit', role_id=role.id) }}" class="btn btn-primary" aria-label="{{ _('Edit role') }}" title="{{ _('Edit role') }}">
+                                        <i class="fas fa-edit" aria-hidden="true"></i>
                                     </a>
                                 </div>
                             </td>

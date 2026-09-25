@@ -78,6 +78,8 @@ class RoleManagerView(MethodView):
             "perm_manager/role_list.html",
             extra_vars={
                 "roles": sorted(perm_model.Role.all(), key=lambda x: x["label"]),
+                "user_counts": _count_by_role(perm_model.UserRole.user_id),
+                "permission_counts": _count_by_role(perm_model.RolePermission.permission),
             },
         )
 
@@ -202,16 +204,30 @@ class BaseUserRolesList(MethodView):
         if role_filter:
             query = query.filter(self._has_role(role_filter, scope, scope_id))
 
+        if scope_id and not tk.asbool(tk.request.args.get("all")):
+            query = query.filter(sa.or_(self._is_member(scope_id), self._has_any_role(scope, scope_id)))
+
         return query.order_by(sa.func.lower(display_name), model.User.name)
 
     def _has_role(self, role_id: str, scope: str, scope_id: str | None) -> Any:
+        return self._has_any_role(scope, scope_id, perm_model.UserRole.role_id == role_id)
+
+    def _has_any_role(self, scope: str, scope_id: str | None, *extra: Any) -> Any:
         user_role = perm_model.UserRole
-        conditions = [user_role.user_id == model.User.id, user_role.role_id == role_id, user_role.scope == scope]
+        conditions = [user_role.user_id == model.User.id, user_role.scope == scope, *extra]
 
         if scope_id:
             conditions.append(user_role.scope_id == scope_id)
 
         return sa.exists().where(*conditions)
+
+    def _is_member(self, org_id: str) -> Any:
+        return sa.exists().where(
+            model.Member.table_id == model.User.id,
+            model.Member.table_name == "user",
+            model.Member.group_id == org_id,
+            model.Member.state == model.State.ACTIVE,
+        )
 
 
 class UserRolesList(BaseUserRolesList):
@@ -345,6 +361,13 @@ def _get_limit() -> int:
         return USER_ROLES_PER_PAGE
 
     return min(max(limit, 1), USER_ROLES_MAX_PER_PAGE)
+
+
+def _count_by_role(column: Any) -> dict[str, int]:
+    role_id = column.class_.role_id
+    query = model.Session.query(role_id, sa.func.count(sa.distinct(column))).group_by(role_id)
+
+    return dict(query.all())
 
 
 def _get_role(role_id: str) -> perm_model.Role:

@@ -13,6 +13,8 @@ js:
   - js/perm-tom-select.js
   - js/perm-search-permissions.js
   - js/perm-permission-dependencies.js
+  - js/perm-permission-matrix.js
+  - js/perm-confirm-role-removal.js
   extra:
     preload:
     - base/main

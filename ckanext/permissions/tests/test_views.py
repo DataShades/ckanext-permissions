@@ -141,6 +141,58 @@ class TestUserRolesList:
 
         assert "Zzzz Last" in body
 
+    def test_org_list_shows_members_and_scoped_roles_by_default(
+        self, app, sysadmin, user_factory, organization_factory
+    ):
+        member = user_factory(fullname="Mia Member")
+        scoped = user_factory(fullname="Sam Scoped")
+        user_factory(fullname="Otto Outsider")
+        org = organization_factory(users=[{"name": member["name"], "capacity": "member"}])
+        utils.assign_role_to_user(scoped["id"], const.Roles.Administrator.value, const.SCOPE_ORGANIZATION, org["id"])
+        headers = {"Authorization": sysadmin["token"]}
+
+        body = app.get(
+            tk.h.url_for("perm_manager.organization_user_roles_list", org_id=org["id"]), headers=headers
+        ).body
+
+        assert "Mia Member" in body
+        assert "Sam Scoped" in body
+        assert "Otto Outsider" not in body
+
+        body = app.get(
+            tk.h.url_for("perm_manager.organization_user_roles_list", org_id=org["id"], all=1), headers=headers
+        ).body
+
+        assert "Otto Outsider" in body
+
+    def test_role_badges_show_labels(self, app, sysadmin, user, test_role):
+        utils.assign_role_to_user(user["id"], test_role["id"])
+
+        url = tk.h.url_for("perm_manager.user_roles_list", role=test_role["id"])
+        body = app.get(url, headers={"Authorization": sysadmin["token"]}, status=200).body
+
+        assert f'<span class="badge bg-success">{test_role["label"]}</span>' in body
+
+
+@pytest.mark.ckan_config("ckan.plugins", "permissions permissions_manager")
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestPermissionMatrix:
+    def test_blocked_cell_has_no_toggle(self, app, sysadmin):
+        body = app.get(
+            tk.h.url_for("perm_manager.permission_list"), headers={"Authorization": sysadmin["token"]}, status=200
+        ).body
+
+        assert "Not allowed" in body
+        assert 'id="anonymous-update_any_dataset"' not in body
+        assert 'name="update_any_dataset|anonymous"' in body
+
+    def test_rows_are_searchable_by_key(self, app, sysadmin):
+        body = app.get(
+            tk.h.url_for("perm_manager.permission_list"), headers={"Authorization": sysadmin["token"]}, status=200
+        ).body
+
+        assert re.search(r'data-search="[^"]*\bupdate_any_dataset\b', body)
+
 
 PAGES = [
     ("perm_manager.permission_list", {}),
@@ -229,6 +281,18 @@ class TestForms:
         self._post(app, sysadmin, tk.h.url_for("perm_manager.role_delete"), {"id": test_role["id"]})
 
         assert perm_model.Role.get(test_role["id"]) is None
+
+    def test_delete_role_asks_for_confirmation(self, app, sysadmin, user, test_role):
+        utils.assign_role_to_user(user["id"], test_role["id"])
+        perm_model.RolePermission.create(test_role["id"], "read_any_dataset")
+
+        body = app.get(
+            tk.h.url_for("perm_manager.role_list"), headers={"Authorization": sysadmin["token"]}, status=200
+        ).body
+
+        assert 'data-module="confirm-action"' in body
+        assert f'<input type="hidden" name="id" value="{test_role["id"]}">' in body
+        assert "It is assigned to 1 user and grants 1 permission." in body
 
     def test_edit_user_roles(self, app, sysadmin, user):
         url = tk.h.url_for("perm_manager.edit_user_role", user_id=user["id"])

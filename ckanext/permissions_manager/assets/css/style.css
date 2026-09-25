@@ -79,3 +79,64 @@
 .row.wrapper.permissions-manager-wrapper .form-actions .btn {
   flex-basis: unset;
 }
+
+.perm-matrix {
+  max-height: 70vh;
+  overflow: auto;
+}
+.perm-matrix .table {
+  margin-bottom: 0;
+}
+.perm-matrix thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background-color: var(--bs-body-bg, #fff);
+}
+.perm-matrix th.perm-matrix-name,
+.perm-matrix tbody td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  min-width: 18rem;
+  background-color: var(--bs-body-bg, #fff);
+}
+.perm-matrix thead th.perm-matrix-name {
+  z-index: 3;
+}
+.perm-matrix th.perm-matrix-role {
+  min-width: 8rem;
+}
+.perm-matrix td.perm-changed {
+  background-color: rgba(79, 46, 220, 0.08);
+}
+.perm-matrix td.perm-cascaded {
+  animation: perm-cascaded 2s ease-out;
+}
+
+.perm-blocked {
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.perm-matrix-actions {
+  position: sticky;
+  bottom: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 0;
+  background-color: var(--bs-body-bg, #fff);
+}
+
+.perm-role-badge-default {
+  color: var(--bs-secondary-color, #6c757d);
+  border: 1px solid currentColor;
+}
+
+@keyframes perm-cascaded {
+  from {
+    background-color: rgba(255, 193, 7, 0.45);
+  }
+}
