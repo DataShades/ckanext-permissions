@@ -1,6 +1,7 @@
 import pytest
 
 import ckan.plugins.toolkit as tk
+from ckan import model
 from ckan.tests.helpers import call_action
 
 import ckanext.permissions.model as perm_model
@@ -24,3 +25,11 @@ class TestRoleAutoassignment:
         call_action("permission_role_delete", id=test_role["id"])
 
         assert tk.h.get_user_roles(user["id"]) == ["authenticated"]
+
+    def test_role_kept_when_user_role_deleted(self, user, test_role):
+        user_role = perm_model.UserRole.create(user["id"], test_role["id"])
+
+        model.Session.delete(user_role)
+        model.Session.commit()
+
+        assert perm_model.Role.get(test_role["id"]) is not None

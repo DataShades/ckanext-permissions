@@ -70,7 +70,7 @@ class UserRole(tk.BaseModel):
         backref=backref("roles", cascade="all, delete"),
     )
 
-    role = relationship(Role, cascade="all, delete")
+    role = relationship(Role)
 
     @classmethod
     def get(cls, user_id: str, scope: str = perm_const.SCOPE_GLOBAL, scope_id: str | None = None) -> list[Self]:
