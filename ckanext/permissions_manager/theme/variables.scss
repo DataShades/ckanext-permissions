@@ -1,0 +1,7 @@
+:root {
+    --perm-toggle-on: var(--bs-primary, #4F2EDC);
+    --perm-toggle-track-on: color-mix(in srgb, var(--perm-toggle-on) 55%, #fff);
+    --perm-toggle-track-off: var(--bs-secondary, #6C757D);
+    --perm-toggle-focus: var(--bs-primary, #4F2EDC);
+    --perm-error: var(--bs-danger, #DC3545);
+}

@@ -101,13 +101,13 @@ class TestPermissionDependencies:
     @pytest.mark.parametrize(
         ("permission", "dependency"),
         [
-            ("update_any_dataset", "read_any_dataset"),
-            ("delete_any_dataset", "read_any_dataset"),
-            ("delete_any_resource", "update_any_dataset"),
+            ("update_any_dataset", "Read any dataset"),
+            ("delete_any_dataset", "Read any dataset"),
+            ("delete_any_resource", "Update any dataset"),
         ],
     )
     def test_grant_without_dependency_is_rejected(self, permission, dependency):
-        with pytest.raises(tk.ValidationError, match=f"also needs: {dependency}"):
+        with pytest.raises(tk.ValidationError, match=f"without {dependency}"):
             call_action("permissions_update", permissions={permission: {"authenticated": True}})
 
         assert not perm_model.RolePermission.get("authenticated", permission)
@@ -132,7 +132,7 @@ class TestPermissionDependencies:
             },
         )
 
-        with pytest.raises(tk.ValidationError, match="depend on it: update_any_dataset"):
+        with pytest.raises(tk.ValidationError, match="can't lose Read any dataset while it has Update any dataset"):
             call_action("permissions_update", permissions={"read_any_dataset": {"authenticated": False}})
 
         assert perm_model.RolePermission.get("authenticated", "read_any_dataset")
@@ -155,14 +155,14 @@ class TestPermissionDependencies:
     def test_dependency_is_per_role(self):
         call_action("permissions_update", permissions={"read_any_dataset": {"administrator": True}})
 
-        with pytest.raises(tk.ValidationError, match="Role authenticated also needs"):
+        with pytest.raises(tk.ValidationError, match="Authenticated can't have Update any dataset without"):
             call_action("permissions_update", permissions={"update_any_dataset": {"authenticated": True}})
 
 
 @pytest.mark.usefixtures("with_plugins", "clean_db")
 class TestAnonymousRestriction:
     def test_grant_to_anonymous_is_rejected(self):
-        with pytest.raises(tk.ValidationError, match="can't be given to the anonymous role"):
+        with pytest.raises(tk.ValidationError, match="can't be given to the Anonymous role"):
             call_action(
                 "permissions_update",
                 permissions={

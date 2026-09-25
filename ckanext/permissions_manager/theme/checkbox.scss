@@ -1,18 +1,32 @@
 .checkbox-wrapper {
+    position: relative;
+
     input[type="checkbox"] {
-        visibility: hidden;
-        display: none;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 40px;
+        height: 20px;
+        margin: 0;
+        opacity: 0;
+        pointer-events: none;
+
+        &:focus-visible+.toggle {
+            outline: 2px solid var(--perm-toggle-focus);
+            outline-offset: 3px;
+            border-radius: 10px;
+        }
 
         &:checked {
             &+.toggle:before {
-                background: #947ADA;
+                background: var(--perm-toggle-track-on);
             }
 
             &+.toggle span {
-                background: #4F2EDC;
+                background: var(--perm-toggle-on);
                 transform: translateX(20px);
                 transition: all 0.2s cubic-bezier(0.8, 0.4, 0.3, 1.25), background 0.15s ease;
-                box-shadow: 0 3px 8px rgba(79, 46, 220, 0.2);
+                box-shadow: 0 3px 8px color-mix(in srgb, var(--perm-toggle-on) 20%, transparent);
             }
 
             &+.toggle span:before {
@@ -56,7 +70,7 @@
                 margin: -18px;
                 width: 56px;
                 height: 56px;
-                background: rgba(79, 46, 220, 0.5);
+                background: color-mix(in srgb, var(--perm-toggle-on) 50%, transparent);
                 border-radius: 50%;
                 transform: scale(0);
                 opacity: 1;
@@ -72,7 +86,7 @@
             width: 34px;
             height: 14px;
             display: block;
-            background: #9A9999;
+            background: var(--perm-toggle-track-off);
             border-radius: 8px;
             transition: background 0.2s ease;
         }

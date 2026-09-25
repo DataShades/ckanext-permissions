@@ -25,8 +25,7 @@ class TestInvalidInput:
             url,
             data={"perm_1|anonymous|extra": "set"},
             headers={"Authorization": sysadmin["token"]},
-            follow_redirects=False,
-            status=302,
+            status=200,
         )
 
     def test_add_role_missing_fields(self, app, sysadmin):
@@ -54,6 +53,23 @@ class TestInvalidInput:
         url = tk.h.url_for("perm_manager.organization_edit_user_role", org_id="missing", user_id=user["id"])
 
         app.post(url, data={"roles": ["administrator"]}, headers={"Authorization": sysadmin["token"]}, status=404)
+
+    def test_user_roles_unknown_role_shows_form_error(self, app, sysadmin, user):
+        url = tk.h.url_for("perm_manager.edit_user_role", user_id=user["id"])
+
+        body = app.post(url, data={"roles": ["missing"]}, headers={"Authorization": sysadmin["token"]}, status=200).body
+
+        assert 'name="roles"' in body
+        assert f'href="{tk.h.url_for("perm_manager.user_roles_list")}"' in body
+
+    def test_org_user_roles_unknown_role_shows_org_form(self, app, sysadmin, user, organization):
+        url = tk.h.url_for("perm_manager.organization_edit_user_role", org_id=organization["id"], user_id=user["id"])
+
+        body = app.post(url, data={"roles": ["missing"]}, headers={"Authorization": sysadmin["token"]}, status=200).body
+
+        assert 'name="roles"' in body
+        org_list_url = tk.h.url_for("perm_manager.organization_user_roles_list", org_id=organization["id"])
+        assert f'href="{org_list_url}"' in body
 
     def test_org_user_roles_stored_by_org_id(self, app, sysadmin, user, organization):
         url = tk.h.url_for("perm_manager.organization_edit_user_role", org_id=organization["name"], user_id=user["id"])
@@ -180,6 +196,12 @@ class TestUserRolesList:
 
         assert "Showing 1–1 of 1" in body
 
+    def test_user_link_uses_name(self, app, sysadmin, user):
+        url = tk.h.url_for("perm_manager.user_roles_list", q=user["fullname"])
+        body = app.get(url, headers={"Authorization": sysadmin["token"]}, status=200).body
+
+        assert f'href="{tk.h.url_for("user.read", id=user["name"])}"' in body
+
     def test_role_badges_show_labels(self, app, sysadmin, user, test_role):
         utils.assign_role_to_user(user["id"], test_role["id"])
 
@@ -200,6 +222,31 @@ class TestPermissionMatrix:
         assert "Not allowed" in body
         assert 'id="anonymous-update_any_dataset"' not in body
         assert 'name="update_any_dataset|anonymous"' in body
+
+    def test_toggles_have_accessible_name(self, app, sysadmin):
+        body = app.get(
+            tk.h.url_for("perm_manager.permission_list"), headers={"Authorization": sysadmin["token"]}, status=200
+        ).body
+
+        assert 'aria-label="Grant Read any dataset to Authenticated"' in body
+
+    def test_dependency_error_keeps_submitted_state(self, app, sysadmin):
+        body = app.post(
+            tk.h.url_for("perm_manager.permission_list"),
+            data={"update_any_dataset|authenticated": "set"},
+            headers={"Authorization": sysadmin["token"]},
+            status=200,
+        ).body
+
+        assert "Authenticated can&#39;t have Update any dataset without Read any dataset" in body
+        assert "{&#39;" not in body
+        assert re.search(r'<td class="perm-error">\s*<input [^>]*name="update_any_dataset\|authenticated">', body)
+
+        toggle = re.search(r'<input type="checkbox" id="authenticated-update_any_dataset"[^>]*>', body)
+        assert toggle
+        assert 'data-submitted="true"' in toggle.group()
+        assert 'aria-invalid="true"' in toggle.group()
+        assert not perm_model.RolePermission.get("authenticated", "update_any_dataset")
 
     def test_rows_are_searchable_by_key(self, app, sysadmin):
         body = app.get(

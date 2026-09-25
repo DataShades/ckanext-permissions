@@ -7,7 +7,7 @@
 
 {% macro select(name, id='', label='', options='', selected='', error='', classes=[], attrs={}, settings={}, is_required=false) %}
     {% set classes = (classes|list) %}
-    {% set selected = selected.split(',') %}
+    {% set selected = selected.split(',') if selected is string else (selected or []) %}
     {%- set extra_html = caller() if caller -%}
 
     {% do classes.append('control-select') %}

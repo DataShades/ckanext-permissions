@@ -35,24 +35,51 @@ def before_request() -> None:
 
 class PermissionManagerView(MethodView):
     def get(self) -> str | Response:
+        return self._render()
+
+    def post(self) -> str | Response:
+        permissions = self._get_permissions()
+
+        try:
+            tk.get_action("permissions_update")({}, {"permissions": permissions})
+        except tk.ValidationError as e:
+            return self._render(permissions, e.error_dict)
+
+        tk.h.flash_success(tk._("Permissions updated"))
+
+        return tk.redirect_to("perm_manager.permission_list")
+
+    def _render(
+        self,
+        submitted: dict[str, dict[str, bool]] | None = None,
+        errors: dict[str, Any] | None = None,
+    ) -> str:
+        errors = errors or {}
+
         return tk.render(
             "perm_manager/list.html",
             extra_vars={
                 "permission_groups": utils.get_permission_groups(),
                 "permissions": utils.get_permissions(),
+                "submitted": submitted or {},
+                "error_messages": _flatten_errors(errors),
+                "error_cells": self._get_error_cells(submitted or {}, errors),
             },
         )
 
-    def post(self) -> Response:
-        try:
-            tk.get_action("permissions_update")({}, {"permissions": self._get_permissions()})
-        except tk.ValidationError as e:
-            tk.h.flash_error(str(e))
-            return tk.redirect_to("perm_manager.permission_list")
+    def _get_error_cells(self, submitted: dict[str, dict[str, bool]], errors: dict[str, Any]) -> set[str]:
+        """Return the `permission|role` cells the admin changed in rows that failed validation."""
+        cells = set()
 
-        tk.h.flash_success(tk._("Permissions updated"))
+        for permission, roles in submitted.items():
+            if permission not in errors:
+                continue
 
-        return tk.redirect_to("perm_manager.permission_list")
+            for role_id, granted in roles.items():
+                if granted != bool(perm_model.RolePermission.get(role_id, permission)):
+                    cells.add(f"{permission}|{role_id}")
+
+        return cells
 
     def _get_permissions(self) -> dict[str, dict[str, bool]]:
         permissions = {}
@@ -172,7 +199,13 @@ class BaseUserRolesList(MethodView):
 
         return Page(
             collection=[
-                {"id": user.id, "display_name": user.display_name, "roles": roles.get(user.id, [])} for user in users
+                {
+                    "id": user.id,
+                    "name": user.name,
+                    "display_name": user.display_name,
+                    "roles": roles.get(user.id, []),
+                }
+                for user in users
             ],
             page=page_number,
             url=url,
@@ -269,20 +302,39 @@ class EditUserRole(MethodView):
         if not user:
             return tk.abort(404, tk._("User not found"))
 
+        return self._render_form(user, {"roles": tk.h.get_user_roles(user.id)}, {})
+
+    def post(self, user_id: str) -> str | Response:
+        return self._update_user_roles(user_id)
+
+    def _render_form(
+        self,
+        user: model.User,
+        data: dict[str, Any],
+        errors: dict[str, Any],
+        group_dict: dict[str, Any] | None = None,
+    ) -> str:
+        if not group_dict:
+            return tk.render(
+                "perm_manager/edit_user_roles.html",
+                extra_vars={"user": user, "data": data, "errors": errors},
+            )
+
         return tk.render(
-            "perm_manager/edit_user_roles.html",
+            "perm_manager/organization/edit_user_roles.html",
             extra_vars={
                 "user": user,
-                "data": {"roles": ",".join(tk.h.get_user_roles(user.id))},
-                "errors": {},
+                "data": data,
+                "errors": errors,
+                "group_dict": group_dict,
+                "group_type": perm_const.SCOPE_ORGANIZATION,
             },
         )
 
-    def post(self, user_id: str) -> str | Response:
-        return self._update_user_roles(user_id, perm_const.SCOPE_GLOBAL)
-
-    def _update_user_roles(self, user_id: str, scope: str, scope_id: str | None = None) -> str | Response:
+    def _update_user_roles(self, user_id: str, group_dict: dict[str, Any] | None = None) -> str | Response:
         payload = {"roles": tk.request.form.getlist("roles")}
+        scope = perm_const.SCOPE_ORGANIZATION if group_dict else perm_const.SCOPE_GLOBAL
+        scope_id = group_dict["id"] if group_dict else None
 
         user = model.User.get(user_id)
 
@@ -292,10 +344,7 @@ class EditUserRole(MethodView):
         data, errors = tk.navl_validate(payload, self.schema)
 
         if errors:
-            return tk.render(
-                "perm_manager/edit_user_roles.html",
-                extra_vars={"user": user, "data": data, "errors": errors},
-            )
+            return self._render_form(user, payload, errors, group_dict)
 
         old_roles = set(tk.h.get_user_roles(user.id, scope, scope_id))
 
@@ -336,23 +385,22 @@ class OrganizationEditUserRole(EditUserRole):
             return tk.abort(404, tk._("User not found"))
 
         org_dict = _get_org_dict(org_id)
-        scope = perm_const.SCOPE_ORGANIZATION
+        roles = tk.h.get_user_roles(user.id, perm_const.SCOPE_ORGANIZATION, org_dict["id"])
 
-        return tk.render(
-            "perm_manager/organization/edit_user_roles.html",
-            extra_vars={
-                "user": user,
-                "data": {"roles": ",".join(tk.h.get_user_roles(user.id, scope, org_dict["id"]))},
-                "errors": {},
-                "group_dict": org_dict,
-                "group_type": scope,
-            },
-        )
+        return self._render_form(user, {"roles": roles}, {}, org_dict)
 
     def post(self, org_id: str, user_id: str) -> str | Response:
-        org_dict = _get_org_dict(org_id)
+        return self._update_user_roles(user_id, _get_org_dict(org_id))
 
-        return self._update_user_roles(user_id, perm_const.SCOPE_ORGANIZATION, org_dict["id"])
+
+def _flatten_errors(errors: Any) -> list[str]:
+    if isinstance(errors, dict):
+        return [message for value in errors.values() for message in _flatten_errors(value)]
+
+    if isinstance(errors, list):
+        return [message for value in errors for message in _flatten_errors(value)]
+
+    return [str(errors)]
 
 
 def _get_limit() -> int:

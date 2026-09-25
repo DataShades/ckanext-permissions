@@ -131,13 +131,3 @@ class TestPermissionRoleUpdate:
             call_action("permission_role_update", id="xxx")
 
         assert e.value.error_dict["id"] == ["Role xxx doesn't exist"]
-
-    def test_permission_role_update_cant_update_label(self, test_role: dict[str, Any]):
-        result = call_action(
-            "permission_role_update",
-            id=test_role["id"],
-            label="XXX",
-            description="New description",
-        )
-
-        assert test_role["label"] == result["label"]

@@ -135,12 +135,15 @@ def _update_role_permissions(permission_key: str, roles_data: dict[str, bool]) -
 
 def _check_blocked_roles(permissions: dict[str, dict[str, bool]]) -> dict[str, list[str]]:
     errors: dict[str, list[str]] = {}
+    labels = _Labels()
 
     for permission_key, roles_data in permissions.items():
         for role_id, granted in roles_data.items():
             if granted and perm_utils.is_permission_blocked_for_role(permission_key, role_id):
                 errors.setdefault(permission_key, []).append(
-                    tk._("Permission can't be given to the {role} role").format(role=role_id)
+                    tk._("{permission} can't be given to the {role} role").format(
+                        permission=labels.permission(permission_key), role=labels.role(role_id)
+                    )
                 )
 
     return errors
@@ -148,6 +151,7 @@ def _check_blocked_roles(permissions: dict[str, dict[str, bool]]) -> dict[str, l
 
 def _check_dependencies(updated_permissions: dict[str, dict[str, bool]]) -> dict[str, list[str]]:
     errors: dict[str, list[str]] = {}
+    labels = _Labels()
 
     for permission_key, roles_data in updated_permissions.items():
         for role_id, granted in roles_data.items():
@@ -159,8 +163,10 @@ def _check_dependencies(updated_permissions: dict[str, dict[str, bool]]) -> dict
                 ]
                 if missing:
                     errors.setdefault(permission_key, []).append(
-                        tk._("Role {role} also needs: {permissions}").format(
-                            role=role_id, permissions=", ".join(missing)
+                        tk._("{role} can't have {permission} without {permissions}").format(
+                            role=labels.role(role_id),
+                            permission=labels.permission(permission_key),
+                            permissions=labels.permissions(missing),
                         )
                     )
             else:
@@ -171,12 +177,30 @@ def _check_dependencies(updated_permissions: dict[str, dict[str, bool]]) -> dict
                 ]
                 if dependents:
                     errors.setdefault(permission_key, []).append(
-                        tk._("Role {role} still has permissions that depend on it: {permissions}").format(
-                            role=role_id, permissions=", ".join(dependents)
+                        tk._("{role} can't lose {permission} while it has {permissions}").format(
+                            role=labels.role(role_id),
+                            permission=labels.permission(permission_key),
+                            permissions=labels.permissions(dependents),
                         )
                     )
 
     return errors
+
+
+class _Labels:
+    def __init__(self):
+        self._permissions = perm_utils.get_permissions()
+        self._roles = perm_utils.get_registered_roles()
+
+    def permission(self, key: str) -> str:
+        definition = self._permissions.get(key)
+        return definition["label"] if definition else key
+
+    def permissions(self, keys: list[str]) -> str:
+        return ", ".join(self.permission(key) for key in keys)
+
+    def role(self, role_id: str) -> str:
+        return self._roles.get(role_id, role_id)
 
 
 def _validate_permission_data(data: DataDict) -> None:

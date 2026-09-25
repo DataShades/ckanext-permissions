@@ -33,7 +33,12 @@ $cell-bg: var(--bs-body-bg, #fff);
     }
 
     td.perm-changed {
-        background-color: rgba(79, 46, 220, 0.08);
+        background-color: color-mix(in srgb, var(--perm-toggle-on) 8%, transparent);
+    }
+
+    td.perm-error {
+        background-color: color-mix(in srgb, var(--perm-error) 12%, transparent);
+        box-shadow: inset 0 0 0 2px var(--perm-error);
     }
 
     td.perm-cascaded {

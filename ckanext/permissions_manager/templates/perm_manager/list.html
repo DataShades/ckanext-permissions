@@ -31,6 +31,17 @@
     <form action="" method="POST" data-module="perm-permission-matrix">
         {{ h.csrf_input() }}
 
+        {% if error_messages %}
+            <div class="alert alert-danger" role="alert">
+                <p>{{ _("Permissions were not saved. Fix the highlighted cells and save again:") }}</p>
+                <ul class="mb-0">
+                    {% for message in error_messages %}
+                        <li>{{ message }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+        {% endif %}
+
         <div class="perm-cascade-notice alert alert-info d-none" role="status" aria-live="polite"></div>
 
         <div class="perm-matrix">
@@ -77,7 +88,9 @@
 
                                 {% for role_id, role_label in registered_roles.items() %}
                                     {% set key = h.permission_munge_string(permission.key) %}
-                                    <td>
+                                    {% set cell = permission.key ~ '|' ~ role_id %}
+                                    {% set has_error = cell in error_cells %}
+                                    <td{% if has_error %} class="perm-error"{% endif %}>
                                         <input type="hidden" value="unset" name="{{ permission.key }}|{{ role_id }}">
 
                                         {% if h.is_permission_blocked_for_role(permission.key, role_id) %}
@@ -87,9 +100,9 @@
                                             </span>
                                         {% else %}
                                             <div class="checkbox-wrapper">
-                                                <input type="checkbox" id="{{ role_id }}-{{ key }}" name="{{ permission.key }}|{{ role_id }}" value="set" data-permission="{{ permission.key }}" data-permission-label="{{ permission.label }}" data-role="{{ role_id }}" data-role-label="{{ role_label }}" data-depends-on="{{ (permission.depends_on or []) | join(' ') }}" {{ 'checked' if h.get_role_permissions(role_id, permission.key) }}/>
+                                                <input type="checkbox" id="{{ role_id }}-{{ key }}" name="{{ permission.key }}|{{ role_id }}" value="set" data-permission="{{ permission.key }}" data-permission-label="{{ permission.label }}" data-role="{{ role_id }}" data-role-label="{{ role_label }}" data-depends-on="{{ (permission.depends_on or []) | join(' ') }}" aria-label="{{ _('Grant {permission} to {role}').format(permission=permission.label, role=role_label) }}"{% if permission.key in submitted and role_id in submitted[permission.key] %} data-submitted="{{ 'true' if submitted[permission.key][role_id] else 'false' }}"{% endif %}{% if has_error %} aria-invalid="true"{% endif %} {{ 'checked' if h.get_role_permissions(role_id, permission.key) }}/>
                                                 <label for="{{ role_id }}-{{ key }}" class="toggle">
-                                                    <span></span>
+                                                    <span aria-hidden="true"></span>
                                                 </label>
                                             </div>
                                         {% endif %}

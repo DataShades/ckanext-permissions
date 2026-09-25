@@ -11,7 +11,14 @@ ckan.module("perm-permission-matrix", function ($) {
       this.el.on("submit", () => (this.submitting = true));
       $(window).on("beforeunload", this._onBeforeUnload.bind(this));
 
+      this._restoreSubmitted();
       this._update();
+    },
+
+    _restoreSubmitted: function () {
+      this.checkboxes.filter("[data-submitted]").each((_, el) => {
+        el.checked = el.dataset.submitted === "true";
+      });
     },
 
     _changed: function () {
