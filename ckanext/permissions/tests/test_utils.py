@@ -256,6 +256,20 @@ class TestAssignRoleToUser:
         role_ids = [role.role_id for role in user_roles]
         assert len(role_ids) == 2
 
+    def test_assign_scoped_role(self, user_factory, organization_factory):
+        from ckanext.permissions import model as perm_model
+
+        user = user_factory()
+        org = organization_factory()
+
+        utils.assign_role_to_user(user["id"], const.Roles.Administrator.value, "organization", org["id"])
+
+        org_roles = perm_model.UserRole.get(user["id"], "organization", org["id"])
+        global_roles = perm_model.UserRole.get(user["id"])
+
+        assert [role.role_id for role in org_roles] == [const.Roles.Administrator.value]
+        assert const.Roles.Administrator.value not in [role.role_id for role in global_roles]
+
 
 @pytest.mark.usefixtures("with_plugins", "clean_db")
 class TestRemoveRoleFromUser:

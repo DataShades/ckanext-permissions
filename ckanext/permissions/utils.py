@@ -150,10 +150,7 @@ def assign_role_to_user(user_id: str, role_id: str, scope: str = "global", scope
         )
         return
 
-    scope_roles = perm_model.UserRole.get(user_id, scope, scope_id)
-
-    if role_id not in [role.role_id for role in scope_roles]:
-        perm_model.UserRole.create(user_id, role_id)
+    perm_model.UserRole.create(user_id, role_id, scope, scope_id)
 
 
 def remove_role_from_user(user_id: str, role_id: str):
