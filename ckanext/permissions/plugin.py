@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import ClassVar
+
 import ckan.plugins as p
 import ckan.plugins.toolkit as tk
 from ckan import types
@@ -19,19 +21,19 @@ class PermissionsPlugin(implementation.PermissionLabels, p.SingletonPlugin):
     p.implements(p.IConfigurer)
     p.implements(p.ISignal)
 
-    _permissions_groups: perm_types.PermissionGroup | None = None
-    _permissions = dict[str, perm_types.PermissionDefinition]
+    _permissions_groups: ClassVar[list[perm_types.PermissionGroup]] = []
+    _permissions: ClassVar[dict[str, perm_types.PermissionDefinition]] = {}
 
     # IConfigurer
 
     def update_config(self, config_: tk.CKANConfig):
-        if not PermissionsPlugin._permissions_groups:  # type: ignore
-            PermissionsPlugin._permissions_groups = list(  # type: ignore
-                utils.parse_permission_group_schemas().values()
-            )
-            PermissionsPlugin._permissions = {  # type: ignore
+        plugin = type(self)
+
+        if not plugin._permissions_groups:
+            plugin._permissions_groups = list(utils.parse_permission_group_schemas().values())
+            plugin._permissions = {
                 permission["key"]: permission
-                for group in PermissionsPlugin._permissions_groups  # type: ignore
+                for group in plugin._permissions_groups
                 for permission in group["permissions"]
             }
 
