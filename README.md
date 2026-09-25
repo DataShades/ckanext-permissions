@@ -63,7 +63,12 @@ Using GIT Clone:
    ckan -c /etc/ckan/default/ckan.ini permissions assign-default-user-roles
    ```
 
-6. Restart CKAN. For example:
+6. Rebuild the search index, so that existing datasets get the permission labels used to filter search results. Without this, users granted `read_any_dataset` or `read_private_dataset` can open those datasets but won't find them in search:
+   ```bash
+   ckan -c /etc/ckan/default/ckan.ini search-index rebuild
+   ```
+
+7. Restart CKAN. For example:
    ```bash
    sudo supervisorctl restart ckan-uwsgi
    ```
