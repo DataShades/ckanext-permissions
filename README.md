@@ -70,6 +70,9 @@ Using GIT Clone:
 
 3. Add `permissions permissions_manager` to the `ckan.plugins` setting in your CKAN config file (by default the config file is located at `/etc/ckan/default/ckan.ini`).
 
+   > [!WARNING]
+   > `permissions` implements `IPermissionLabels`, and CKAN uses only the first enabled plugin that implements it. If another plugin also implements it, whichever comes first in `ckan.plugins` wins and the other's labels are ignored. When `permissions` loses, users granted `read_any_dataset` or `read_private_dataset` won't find private datasets in search. To combine both, write a plugin that subclasses `ckanext.permissions.implementation.permission_labels.PermissionLabels`, merges the other plugin's labels into its results, and is listed first.
+
 4. Initialize DB tables:
    ```bash
    ckan -c /etc/ckan/default/ckan.ini db upgrade -p permissions
