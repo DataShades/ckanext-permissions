@@ -4,7 +4,7 @@ import pytest
 
 import ckan.plugins.toolkit as tk
 
-from ckanext.permissions import const
+from ckanext.permissions import const, utils
 from ckanext.permissions import model as perm_model
 
 
@@ -88,3 +88,36 @@ class TestAuditLog:
             f"User roles updated: user={user['name']} scope=global scope_id=None "
             f"added=['administrator'] removed=['authenticated'] actor={sysadmin['name']}"
         ) in caplog.text
+
+
+@pytest.mark.ckan_config("ckan.plugins", "permissions permissions_manager")
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestUserRolesList:
+    def test_filter_by_role(self, app, sysadmin, user_factory):
+        admin = user_factory(fullname="Alice Admin")
+        user_factory(fullname="Bob Plain")
+        utils.assign_role_to_user(admin["id"], const.Roles.Administrator.value)
+
+        url = tk.h.url_for("perm_manager.user_roles_list", role=const.Roles.Administrator.value)
+        body = app.get(url, headers={"Authorization": sysadmin["token"]}, status=200).body
+
+        assert "Alice Admin" in body
+        assert "Bob Plain" not in body
+
+    def test_filter_by_name(self, app, sysadmin, user_factory):
+        user_factory(fullname="Alice Admin")
+        user_factory(fullname="Bob Plain")
+
+        url = tk.h.url_for("perm_manager.user_roles_list", q="bob")
+        body = app.get(url, headers={"Authorization": sysadmin["token"]}, status=200).body
+
+        assert "Bob Plain" in body
+        assert "Alice Admin" not in body
+
+    def test_page_past_end_shows_last_page(self, app, sysadmin, user_factory):
+        user_factory(fullname="Zzzz Last")
+
+        url = tk.h.url_for("perm_manager.user_roles_list", limit=1, page=999)
+        body = app.get(url, headers={"Authorization": sysadmin["token"]}, status=200).body
+
+        assert "Zzzz Last" in body

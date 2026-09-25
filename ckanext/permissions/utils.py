@@ -125,14 +125,7 @@ def check_permission(
             and perm_model.RolePermission.get(perm_const.Roles.Anonymous.value, permission) is not None
         )
 
-    for role in user.roles:  # type: ignore
-        if role.scope != scope or role.scope_id != scope_id:
-            continue
-
-        if perm_model.RolePermission.get(str(role.role_id), permission) is not None:
-            return True
-
-    return False
+    return perm_model.UserRole.has_permission(user.id, permission, scope, scope_id)
 
 
 def check_package_permission(
@@ -177,13 +170,7 @@ def get_permission_scope_ids(
     if isinstance(user, model.AnonymousUser):
         return set()
 
-    return {
-        str(role.scope_id)
-        for role in user.roles  # type: ignore
-        if role.scope == scope
-        and role.scope_id
-        and any(perm_model.RolePermission.get(str(role.role_id), permission) for permission in permissions)
-    }
+    return perm_model.UserRole.get_scope_ids_with_permissions(user.id, permissions, scope)
 
 
 def assign_role_to_user(user_id: str, role_id: str, scope: str = perm_const.SCOPE_GLOBAL, scope_id: str | None = None):

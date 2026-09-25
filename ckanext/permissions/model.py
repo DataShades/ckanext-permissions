@@ -84,6 +84,50 @@ class UserRole(tk.BaseModel):
         return query.all()
 
     @classmethod
+    def get_for_users(
+        cls, user_ids: list[str], scope: str = perm_const.SCOPE_GLOBAL, scope_id: str | None = None
+    ) -> dict[str, list[str]]:
+        query: Query = model.Session.query(cls).filter(cls.user_id.in_(user_ids), cls.scope == scope)
+
+        if scope_id:
+            query = query.filter(cls.scope_id == scope_id)
+
+        roles: dict[str, list[str]] = {}
+
+        for user_role in query:
+            roles.setdefault(str(user_role.user_id), []).append(str(user_role.role_id))
+
+        return roles
+
+    @classmethod
+    def has_permission(
+        cls, user_id: str, permission: str, scope: str = perm_const.SCOPE_GLOBAL, scope_id: str | None = None
+    ) -> bool:
+        query = cls._with_permissions(user_id, [permission], scope)
+        query = query.filter(cls.scope_id == scope_id) if scope_id else query.filter(cls.scope_id.is_(None))
+
+        return bool(model.Session.query(query.exists()).scalar())
+
+    @classmethod
+    def get_scope_ids_with_permissions(cls, user_id: str, permissions: list[str], scope: str) -> set[str]:
+        query = (
+            cls._with_permissions(user_id, permissions, scope)
+            .filter(cls.scope_id.isnot(None))
+            .with_entities(cls.scope_id)
+            .distinct()
+        )
+
+        return {str(scope_id) for (scope_id,) in query}
+
+    @classmethod
+    def _with_permissions(cls, user_id: str, permissions: list[str], scope: str) -> Query:
+        return (
+            model.Session.query(cls)
+            .join(RolePermission, RolePermission.role_id == cls.role_id)
+            .filter(cls.user_id == user_id, cls.scope == scope, RolePermission.permission.in_(permissions))
+        )
+
+    @classmethod
     def create(
         cls,
         user_id: str,
