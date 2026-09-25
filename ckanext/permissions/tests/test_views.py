@@ -139,3 +139,100 @@ class TestUserRolesList:
         body = app.get(url, headers={"Authorization": sysadmin["token"]}, status=200).body
 
         assert "Zzzz Last" in body
+
+
+PAGES = [
+    ("perm_manager.permission_list", {}),
+    ("perm_manager.role_list", {}),
+    ("perm_manager.role_add", {}),
+    ("perm_manager.role_edit", {"role_id": "{role}"}),
+    ("perm_manager.user_roles_list", {}),
+    ("perm_manager.edit_user_role", {"user_id": "{user}"}),
+    ("perm_manager.organization_user_roles_list", {"org_id": "{org}"}),
+    ("perm_manager.organization_edit_user_role", {"org_id": "{org}", "user_id": "{user}"}),
+]
+
+FORM_PAGES = [
+    "perm_manager.permission_list",
+    "perm_manager.role_list",
+    "perm_manager.role_add",
+    "perm_manager.role_edit",
+    "perm_manager.edit_user_role",
+    "perm_manager.organization_edit_user_role",
+]
+
+
+@pytest.fixture
+def page_url(test_role, user, organization):
+    def build(endpoint: str) -> str:
+        kwargs = dict(next(kwargs for name, kwargs in PAGES if name == endpoint))
+        values = {"role": test_role["id"], "user": user["id"], "org": organization["id"]}
+
+        return tk.h.url_for(endpoint, **{key: value.format(**values) for key, value in kwargs.items()})
+
+    return build
+
+
+@pytest.mark.ckan_config("ckan.plugins", "permissions permissions_manager")
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestSysadminGate:
+    @pytest.mark.parametrize("endpoint", [name for name, _ in PAGES])
+    def test_sysadmin_allowed(self, app, sysadmin, page_url, endpoint):
+        app.get(page_url(endpoint), headers={"Authorization": sysadmin["token"]}, status=200)
+
+    @pytest.mark.parametrize("endpoint", [name for name, _ in PAGES])
+    def test_regular_user_forbidden(self, app, user_factory, page_url, endpoint):
+        other_user = user_factory()
+
+        app.get(page_url(endpoint), headers={"Authorization": other_user["token"]}, status=403)
+
+    @pytest.mark.parametrize("endpoint", [name for name, _ in PAGES])
+    def test_anonymous_forbidden(self, app, page_url, endpoint):
+        app.get(page_url(endpoint), status=403)
+
+    @pytest.mark.parametrize("endpoint", FORM_PAGES)
+    def test_forms_include_csrf_field(self, app, sysadmin, page_url, endpoint):
+        body = app.get(page_url(endpoint), headers={"Authorization": sysadmin["token"]}, status=200).body
+
+        assert f'name="{tk.config["WTF_CSRF_FIELD_NAME"]}"' in body
+
+
+@pytest.mark.ckan_config("ckan.plugins", "permissions permissions_manager")
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestForms:
+    def _post(self, app, sysadmin, url, data):
+        app.post(url, data=data, headers={"Authorization": sysadmin["token"]}, follow_redirects=False, status=302)
+
+    def test_update_permissions(self, app, sysadmin):
+        self._post(app, sysadmin, tk.h.url_for("perm_manager.permission_list"), {"perm_1|anonymous": "set"})
+
+        assert perm_model.RolePermission.get(const.Roles.Anonymous.value, "perm_1")
+
+    def test_add_role(self, app, sysadmin):
+        data = {"id": "editor", "label": "Editor", "description": "Editor role"}
+
+        self._post(app, sysadmin, tk.h.url_for("perm_manager.role_add"), data)
+
+        assert perm_model.Role.get("editor")
+
+    def test_edit_role(self, app, sysadmin, test_role):
+        url = tk.h.url_for("perm_manager.role_edit", role_id=test_role["id"])
+
+        self._post(app, sysadmin, url, {"description": "Updated"})
+
+        role = perm_model.Role.get(test_role["id"])
+        assert role
+        assert role.description == "Updated"
+
+    def test_delete_role(self, app, sysadmin, test_role):
+        self._post(app, sysadmin, tk.h.url_for("perm_manager.role_delete"), {"id": test_role["id"]})
+
+        assert perm_model.Role.get(test_role["id"]) is None
+
+    def test_edit_user_roles(self, app, sysadmin, user):
+        url = tk.h.url_for("perm_manager.edit_user_role", user_id=user["id"])
+        roles = [const.Roles.Administrator.value, const.Roles.Authenticated.value]
+
+        self._post(app, sysadmin, url, {"roles": roles})
+
+        assert sorted(tk.h.get_user_roles(user["id"])) == sorted(roles)

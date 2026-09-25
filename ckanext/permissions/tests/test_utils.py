@@ -159,7 +159,8 @@ class TestLoadSchema:
 class TestGetPermissionGroups:
     def test_get_permission_groups(self):
         result = utils.get_permission_groups()
-        assert isinstance(result, list)
+
+        assert [group["name"] for group in result] == ["Test group", "Default group"]
 
 
 @pytest.mark.usefixtures("with_plugins")
@@ -254,7 +255,7 @@ class TestAssignRoleToUser:
 
         user_roles = perm_model.UserRole.get(user["id"])
         role_ids = [role.role_id for role in user_roles]
-        assert len(role_ids) == 2
+        assert role_ids.count(const.Roles.Administrator.value) == 1
 
     def test_assign_scoped_role(self, user_factory, organization_factory):
         from ckanext.permissions import model as perm_model
@@ -307,14 +308,15 @@ class TestRemoveRoleFromUser:
         user = user_factory()
 
         utils.assign_role_to_user(user["id"], const.Roles.Administrator.value)
+        utils.assign_role_to_user(user["id"], test_role["id"])
 
         utils.remove_role_from_user(user["id"], const.Roles.Administrator.value)
 
-        # Verify only the correct role was removed
         user_roles = perm_model.UserRole.get(user["id"])
         role_ids = [role.role_id for role in user_roles]
         assert const.Roles.Administrator.value not in role_ids
         assert const.Roles.Authenticated.value in role_ids
+        assert test_role["id"] in role_ids
 
     def test_remove_role_keeps_other_scopes(self, user_factory, organization_factory):
         from ckanext.permissions import model as perm_model
