@@ -32,6 +32,7 @@ Compatibility with core CKAN versions:
 | 2.9 and earlier | no            |
 | 2.10+           | yes           |
 | 2.11+           | yes           |
+| 2.12+           | yes           |
 
 
 ## Installation

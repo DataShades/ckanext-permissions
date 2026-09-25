@@ -7,13 +7,22 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        ckan-version: ["2.10", "2.11"]
+        include:
+          # ckan-image: see https://github.com/ckan/ckan-docker-base
+          - ckan-version: "2.12"
+            ckan-image: "2.12-py3.14"
+          - ckan-version: "2.11"
+            ckan-image: "2.11"
+          - ckan-version: "2.10"
+            ckan-image: "2.10"
+
+    name: Test CKAN ${{ matrix.ckan-version }}
 
     container:
       # The CKAN version tag of the Solr and Postgres containers should match
       # the one of the container the tests run on.
       # You can switch this base image with a custom image tailored to your project
-      image: ckan/ckan-dev:${{ matrix.ckan-version }}
+      image: ckan/ckan-dev:${{ matrix.ckan-image }}
       options: --user root
 
     services:
