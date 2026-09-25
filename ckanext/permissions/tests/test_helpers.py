@@ -23,6 +23,18 @@ class TestGetRegisteredRoles:
         assert len(result) == 4
         assert result[test_role["id"]] == test_role["label"]
 
+    def test_order(self):
+        call_action("permission_role_create", id="aaa", label="Zeta", description="xxx")
+        call_action("permission_role_create", id="zzz", label="Alpha", description="xxx")
+
+        assert list(helpers.get_registered_roles()) == [
+            const.Roles.Anonymous.value,
+            const.Roles.Authenticated.value,
+            const.Roles.Administrator.value,
+            "zzz",
+            "aaa",
+        ]
+
 
 @pytest.mark.usefixtures("with_plugins", "clean_db")
 class TestGetRolePermissions:

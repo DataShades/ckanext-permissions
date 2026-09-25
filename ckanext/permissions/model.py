@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import logging
 
-from sqlalchemy import Column, ForeignKey, String
+from sqlalchemy import Column, ForeignKey, String, case, func
 from sqlalchemy.orm import Query, backref, relationship
 from typing_extensions import Self
 
@@ -39,7 +39,14 @@ class Role(tk.BaseModel):
 
     @classmethod
     def all(cls) -> list[perm_types.Role]:
-        return [role.dictize({}) for role in model.Session.query(cls).all()]
+        """Get all roles: the default ones in `perm_const.Roles` order, then the custom ones by label."""
+        default_order = {role.value: position for position, role in enumerate(perm_const.Roles)}
+        query = model.Session.query(cls).order_by(
+            case(default_order, value=cls.id, else_=len(default_order)),
+            func.lower(cls.label),
+        )
+
+        return [role.dictize({}) for role in query]
 
     def update(self, description: str) -> None:
         self.description = description
