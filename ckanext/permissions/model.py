@@ -6,8 +6,7 @@ from sqlalchemy import Column, ForeignKey, String
 from sqlalchemy.orm import Query, backref, relationship
 from typing_extensions import Self
 
-import ckan.model as model
-import ckan.types as types
+from ckan import model, types
 from ckan.plugins import toolkit as tk
 
 import ckanext.permissions.types as perm_types
@@ -36,7 +35,7 @@ class Role(tk.BaseModel):
         return model.Session.query(cls).filter(cls.id == role).one_or_none()
 
     @classmethod
-    def all(cls) -> list[Self]:
+    def all(cls) -> list[perm_types.Role]:
         return [role.dictize({}) for role in model.Session.query(cls).all()]
 
     def update(self, description: str) -> None:
@@ -89,11 +88,13 @@ class UserRole(tk.BaseModel):
         scope: str = "global",
         scope_id: str | None = None,
     ) -> Self:
-        for user_role in cls.get(user_id, scope, scope_id):
-            if user_role.role_id != role:
-                continue
+        query: Query = model.Session.query(cls).filter(cls.user_id == user_id, cls.role_id == role, cls.scope == scope)
 
-            return user_role
+        if scope_id:
+            query = query.filter(cls.scope_id == scope_id)
+
+        if existing := query.first():
+            return existing
 
         user_role = cls(user_id=user_id, role_id=role, scope=scope, scope_id=scope_id)
 

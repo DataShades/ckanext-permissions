@@ -4,7 +4,7 @@ from ckanext.permissions import const, model, utils
 
 
 def get_registered_roles() -> dict[str, str]:
-    """Get the registered roles
+    """Get the registered roles.
 
     Returns:
         The registered roles
@@ -13,7 +13,7 @@ def get_registered_roles() -> dict[str, str]:
 
 
 def get_role_permissions(role_id: str, permission: str) -> bool:
-    """Check if a role has a permission
+    """Check if a role has a permission.
 
     Args:
         role_id (str): The id of the role
@@ -26,7 +26,7 @@ def get_role_permissions(role_id: str, permission: str) -> bool:
 
 
 def get_user_roles(user_id: str, scope: str = "global", scope_id: str | None = None) -> list[str]:
-    """Get the roles of a user
+    """Get the roles of a user.
 
     Args:
         user_id (str): The id of the user
@@ -40,7 +40,7 @@ def get_user_roles(user_id: str, scope: str = "global", scope_id: str | None = N
 
 
 def is_default_role(role_id: str) -> bool:
-    """Check if the role is a default role
+    """Check if the role is a default role.
 
     Args:
         role_id (str): The id of the role to check

@@ -19,9 +19,7 @@ log = logging.getLogger(__name__)
 
 
 def parse_permission_group_schemas() -> dict[str, perm_types.PermissionGroup]:
-    groups = _load_schemas(
-        tk.aslist(tk.config.get("ckanext.permissions.permission_groups")), "name"
-    )
+    groups = _load_schemas(tk.aslist(tk.config.get("ckanext.permissions.permission_groups")), "name")
 
     validate_groups(groups)
 
@@ -68,9 +66,7 @@ def validate_groups(groups: dict[str, perm_types.PermissionGroup]) -> bool:
     permissions = []
 
     for group in groups.values():
-        data, errors = tk.navl_validate(
-            cast(dict, group), perm_schema.permission_group_schema()
-        )
+        data, errors = tk.navl_validate(cast(dict, group), perm_schema.permission_group_schema())
 
         if errors:
             raise tk.ValidationError(errors)
@@ -83,9 +79,7 @@ def validate_groups(groups: dict[str, perm_types.PermissionGroup]) -> bool:
 
         for permission in data["permissions"]:
             if permission["key"] in permissions:
-                raise tk.ValidationError(
-                    f"Permission {permission['key']} is duplicated"
-                )
+                raise tk.ValidationError(f"Permission {permission['key']} is duplicated")
 
             permissions.append(permission["key"])
 
@@ -93,13 +87,13 @@ def validate_groups(groups: dict[str, perm_types.PermissionGroup]) -> bool:
 
 
 def get_permission_groups() -> list[perm_types.PermissionGroup]:
-    from ckanext.permissions.plugin import PermissionsPlugin # noqa PLC0415
+    from ckanext.permissions.plugin import PermissionsPlugin  # noqa PLC0415
 
     return PermissionsPlugin._permissions_groups  # type: ignore
 
 
 def get_permissions() -> dict[str, perm_types.PermissionDefinition]:
-    from ckanext.permissions.plugin import PermissionsPlugin # noqa PLC0415
+    from ckanext.permissions.plugin import PermissionsPlugin  # noqa PLC0415
 
     return PermissionsPlugin._permissions  # type: ignore
 
@@ -126,10 +120,7 @@ def check_permission(
         bool: True if user has the permission, False otherwise
     """
     if isinstance(user, model.AnonymousUser):
-        return (
-            perm_model.RolePermission.get(perm_const.Roles.Anonymous.value, permission)
-            is not None
-        )
+        return perm_model.RolePermission.get(perm_const.Roles.Anonymous.value, permission) is not None
 
     for role in user.roles:  # type: ignore
         if role.scope != scope or role.scope_id != scope_id:
@@ -141,9 +132,7 @@ def check_permission(
     return False
 
 
-def assign_role_to_user(
-    user_id: str, role_id: str, scope: str = "global", scope_id: str | None = None
-):
+def assign_role_to_user(user_id: str, role_id: str, scope: str = "global", scope_id: str | None = None):
     """Assign role to an User.
 
     Args:

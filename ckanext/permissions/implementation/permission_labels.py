@@ -38,8 +38,9 @@ class PermissionLabels(p.SingletonPlugin, DefaultPermissionLabels):
 
         user = user_obj or model.AnonymousUser()
 
-        for permission in ["read_any_dataset", "read_private_dataset"]:
-            if perm_utils.check_permission(permission, user):
-                labels.append("permission-allowed")
+        if any(
+            perm_utils.check_permission(permission, user) for permission in ["read_any_dataset", "read_private_dataset"]
+        ):
+            labels.append("permission-allowed")
 
         return labels

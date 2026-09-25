@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import ckan.plugins as p
 import ckan.plugins.toolkit as tk
-import ckan.types as types
+from ckan import types
 
 
 @tk.blanket.blueprints
@@ -13,7 +13,7 @@ class PermissionsManagerPlugin(p.SingletonPlugin):
 
     # IConfigurer
 
-    def update_config(self, config_):
+    def update_config(self, config_: tk.CKANConfig):
         tk.add_template_directory(config_, "templates")
         tk.add_public_directory(config_, "public")
         tk.add_resource("assets", "permissions_manager")

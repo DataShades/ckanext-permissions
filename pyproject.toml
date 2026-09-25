@@ -45,12 +45,72 @@ find = {}
 [tool.ruff]
 target-version = "py310"
 line-length = 120
+lint.select = [
+    "ANN0", # type annotations for function arguments
+    "B",    # likely bugs and design problems
+    "BLE",  # do not catch blind exception
+    "C4",   # better list/set/dict comprehensions
+    "C90",  # check McCabe complexity
+    "DTZ",  # enforce timezone in date objects
+    "E",    # pycodestyle error
+    "W",    # pycodestyle warning
+    "F",    # pyflakes
+    "FA",   # verify annotations from future
+    "G",    # format strings for logging statements
+    "N",    # naming conventions
+    "I",    # isort
+    "ICN",  # import conventions
+    "D2",   # doc formatting
+    "D4",   # doc convention
+    "PL",   # pylint
+    "PERF", # performance anti-patterns
+    "PT",   # pytest style
+    "PIE",  # misc lints
+    "RET",  # improvements for return statements
+    "RSE",  # improvements for rise statements
+    "S",    # security testing
+    "SIM",  # simplify code
+    "T10",  # debugging statements
+    "T20",  # print statements
+    "TID",  # tidier imports
+    "TRY",  # better exceptions
+    "UP",   # upgrade syntax for newer versions of the language
+]
+lint.ignore = [
+    "D100",    # do not require docstring for public modules
+    "D103",    # do not require docstring for public functions
+    "D104",    # do not require docstring for public packages
+    "RET503",  # don't enforce return-None
+    "E712",    # comparison to bool: violated by SQLAlchemy filters
+    "PLC1901", # simplify comparison to empty string: violated by SQLAlchemy filters
+    "TRY003",
+]
 
-[tool.isort]
-known_ckan = "ckan"
-known_ckanext = "ckanext"
-known_self = "ckanext.permissions"
-sections = "FUTURE,STDLIB,FIRSTPARTY,THIRDPARTY,CKAN,CKANEXT,SELF,LOCALFOLDER"
+[tool.ruff.lint.per-file-ignores]
+"**/tests*" = ["S", "PL", "ANN", "D102", "DTZ001", "PT019", "E741"]
+
+[tool.ruff.lint.flake8-import-conventions]
+aliases = { "ckan.plugins" = "p", "ckan.plugins.toolkit" = "tk", "sqlalchemy" = "sa" }
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+section-order = [
+    "future",
+    "standard-library",
+    "first-party",
+    "third-party",
+    "ckan",
+    "ckanext",
+    "self",
+    "local-folder",
+]
+
+[tool.ruff.lint.isort.sections]
+ckan = ["ckan"]
+ckanext = ["ckanext"]
+self = ["ckanext.permissions", "ckanext.permissions_manager"]
 
 [tool.pytest.ini_options]
 addopts = "--ckan-ini test.ini"

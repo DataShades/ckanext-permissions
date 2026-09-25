@@ -13,7 +13,7 @@ from ckanext.permissions import utils as perm_utils
 fake = Faker()
 
 
-@pytest.fixture()
+@pytest.fixture
 def clean_db(reset_db, migrate_db_for):
     reset_db()
     migrate_db_for("permissions")

@@ -1,4 +1,4 @@
-"""Init tables
+"""Init tables.
 
 Revision ID: a849104ccfdc
 Revises:

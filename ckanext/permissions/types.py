@@ -1,18 +1,20 @@
 from __future__ import annotations
 
-from typing import Optional, TypedDict
+from typing import TypedDict
+
+from typing_extensions import NotRequired
 
 
 class PermissionGroup(TypedDict):
     name: str
-    permissions: list["PermissionDefinition"]
-    description: Optional[str]
+    permissions: list[PermissionDefinition]
+    description: str | None
 
 
-class PermissionDefinition(TypedDict, total=False):
+class PermissionDefinition(TypedDict):
     key: str
     label: str
-    description: Optional[str]
+    description: NotRequired[str | None]
 
 
 class PermissionRoleDefinition(TypedDict):

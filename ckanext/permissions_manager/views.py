@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 import logging
-from typing import Any, Union
+from typing import Any
 
 from flask import Blueprint, Response
 from flask.views import MethodView
 
-import ckan.model as model
 import ckan.plugins.toolkit as tk
-import ckan.types as types
+from ckan import model, types
 from ckan.lib.helpers import Page
 
 from ckanext.permissions import model as perm_model
@@ -30,7 +29,7 @@ def before_request() -> None:
 
 
 class PermissionManagerView(MethodView):
-    def get(self) -> Union[str, Response]:
+    def get(self) -> str | Response:
         return tk.render(
             "perm_manager/list.html",
             extra_vars={
@@ -52,7 +51,7 @@ class PermissionManagerView(MethodView):
     def _get_permissions(self) -> dict[str, dict[str, bool]]:
         permissions = {}
 
-        for key in tk.request.form.keys():
+        for key in tk.request.form:
             if "|" not in key:
                 continue
 
@@ -68,7 +67,7 @@ class PermissionManagerView(MethodView):
 
 
 class RoleManagerView(MethodView):
-    def get(self) -> Union[str, Response]:
+    def get(self) -> str | Response:
         return tk.render(
             "perm_manager/role_list.html",
             extra_vars={
@@ -78,13 +77,13 @@ class RoleManagerView(MethodView):
 
 
 class RoleAdd(MethodView):
-    def get(self) -> Union[str, Response]:
+    def get(self) -> str | Response:
         return tk.render(
             "perm_manager/add_role.html",
             extra_vars={"errors": {}, "data": {}},
         )
 
-    def post(self) -> Union[str, Response]:
+    def post(self) -> str | Response:
         payload = dict(tk.request.form)
 
         tk.get_or_bust(payload, ["id", "label", "description"])
@@ -121,13 +120,13 @@ class RoleDelete(MethodView):
 
 
 class RoleEdit(MethodView):
-    def get(self, role_id: str) -> Union[str, Response]:
+    def get(self, role_id: str) -> str | Response:
         return tk.render(
             "perm_manager/edit_role.html",
             extra_vars={"role": perm_model.Role.get(role_id), "errors": {}, "data": {}},
         )
 
-    def post(self, role_id: str) -> Union[str, Response]:
+    def post(self, role_id: str) -> str | Response:
         payload = dict(tk.request.form)
 
         tk.get_or_bust(payload, "description")
@@ -157,36 +156,27 @@ class RoleEdit(MethodView):
 
 class BaseUserRolesList(MethodView):
     def _get_user_with_roles(self, scope: str = "global", scope_id: str | None = None) -> list[dict[str, Any]]:
-        """
-        Get all active users and their roles.
-        """
-        users = self._get_active_users()
-        result: list[dict[str, Any]] = []
-
-        for user in users:
-            result.append(
-                {
-                    "id": user.id,
-                    "display_name": user.display_name,
-                    "roles": tk.h.get_user_roles(user.id, scope, scope_id),
-                }
-            )
+        """Get all active users and their roles."""
+        result: list[dict[str, Any]] = [
+            {
+                "id": user.id,
+                "display_name": user.display_name,
+                "roles": tk.h.get_user_roles(user.id, scope, scope_id),
+            }
+            for user in self._get_active_users()
+        ]
 
         return self._apply_filters(result)
 
     def _get_active_users(self) -> list[model.User]:
-        """
-        Get all active users and sort them by display name.
-        """
+        """Get all active users and sort them by display name."""
         return sorted(
             (model.Session.query(model.User).filter(model.User.state == model.State.ACTIVE).all()),
             key=lambda x: x.display_name,
         )
 
     def _apply_filters(self, users: list[dict[str, Any]]) -> list[dict[str, Any]]:
-        """
-        Apply filters based on username and role.
-        """
+        """Apply filters based on username and role."""
         q = tk.request.args.get("q", "").strip()
         role_filter = tk.request.args.get("role", "").strip()
 
@@ -200,7 +190,7 @@ class BaseUserRolesList(MethodView):
 
 
 class UserRolesList(BaseUserRolesList):
-    def get(self) -> Union[str, Response]:
+    def get(self) -> str | Response:
         users = self._get_user_with_roles()
         page = Page(
             collection=users,
@@ -213,11 +203,11 @@ class UserRolesList(BaseUserRolesList):
 
 
 class OrganizationUserRolesList(BaseUserRolesList):
-    def get(self, org_id: str) -> Union[str, Response]:
+    def get(self, org_id: str) -> str | Response:
         users = self._get_user_with_roles(scope="organization", scope_id=org_id)
         org_dict = _get_org_dict(org_id)
 
-        def _pager_url(**kwargs):
+        def _pager_url(**kwargs: Any) -> str:
             return tk.h.url_for("perm_manager.organization_user_roles_list", org_id=org_id, **kwargs)
 
         page = Page(
@@ -241,10 +231,10 @@ class OrganizationUserRolesList(BaseUserRolesList):
 class EditUserRole(MethodView):
     def __init__(self):
         self.schema = {
-            "roles": [tk.get_validator(validator) for validator in "not_missing list_of_strings roles_exists".split()]
+            "roles": [tk.get_validator(validator) for validator in ["not_missing", "list_of_strings", "roles_exists"]]
         }
 
-    def get(self, user_id: str) -> Union[str, Response]:
+    def get(self, user_id: str) -> str | Response:
         user = model.User.get(user_id)
 
         if not user:
@@ -259,10 +249,10 @@ class EditUserRole(MethodView):
             },
         )
 
-    def post(self, user_id: str) -> Union[str, Response]:
+    def post(self, user_id: str) -> str | Response:
         return self._update_user_roles(user_id, "global")
 
-    def _update_user_roles(self, user_id: str, scope: str, scope_id: str | None = None) -> Union[str, Response]:
+    def _update_user_roles(self, user_id: str, scope: str, scope_id: str | None = None) -> str | Response:
         payload = {"roles": tk.request.form.getlist("roles")}
 
         user = model.User.get(user_id)
@@ -295,7 +285,7 @@ class EditUserRole(MethodView):
 
 
 class OrganizationEditUserRole(EditUserRole):
-    def get(self, org_id: str, user_id: str) -> Union[str, Response]:
+    def get(self, org_id: str, user_id: str) -> str | Response:
         user = model.User.get(user_id)
 
         if not user:
@@ -315,7 +305,7 @@ class OrganizationEditUserRole(EditUserRole):
             },
         )
 
-    def post(self, org_id: str, user_id: str) -> Union[str, Response]:
+    def post(self, org_id: str, user_id: str) -> str | Response:
         return self._update_user_roles(user_id, "organization", org_id)
 
 

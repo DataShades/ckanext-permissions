@@ -1,7 +1,8 @@
 from typing import cast
 
-import ckan.plugins.toolkit as tk
 import pytest
+
+import ckan.plugins.toolkit as tk
 from ckan import model
 from ckan.tests.helpers import call_action
 
@@ -108,9 +109,7 @@ class TestParsePermissionGroupsValidation:
                     "new_group": PermissionGroup(
                         name="xxx",
                         description="xxx",
-                        permissions=[
-                            PermissionDefinition(key="xxx", label="", description="xxx")
-                        ],
+                        permissions=[PermissionDefinition(key="xxx", label="", description="xxx")],
                     )
                 }
             )
@@ -121,9 +120,7 @@ class TestParsePermissionGroupsValidation:
                 "new_group": PermissionGroup(
                     name="xxx",
                     description="xxx",
-                    permissions=[
-                        PermissionDefinition(key="xxx", label="xxx", description="")
-                    ],
+                    permissions=[PermissionDefinition(key="xxx", label="xxx", description="")],
                 ),
             }
         )
@@ -171,9 +168,7 @@ class TestGetPermissions:
         result = utils.get_permissions()
 
         assert isinstance(result, dict)
-        assert result["perm_1"] == PermissionDefinition(
-            key="perm_1", label="Permission 1"
-        )
+        assert result["perm_1"] == PermissionDefinition(key="perm_1", label="Permission 1")
 
 
 @pytest.mark.usefixtures("with_plugins", "clean_db")
@@ -211,7 +206,7 @@ class TestCheckPermission:
 @pytest.mark.usefixtures("with_plugins", "clean_db")
 class TestEnsureDefaultRoles:
     def test_creates_default_roles(self, reset_db, migrate_db_for):
-        """Test that ensure_default_roles creates all default roles"""
+        """Test that ensure_default_roles creates all default roles."""
         from ckanext.permissions import model as perm_model
 
         for role in perm_model.Role.all():
@@ -228,7 +223,7 @@ class TestEnsureDefaultRoles:
         assert perm_model.Role.get("administrator") is not None
 
     def test_reuse(self):
-        """Test that ensure_default_roles can be called multiple times"""
+        """Test that ensure_default_roles can be called multiple times."""
         # Call ensure_default_roles after initial call in conftest.py
         addiitonal_call = utils.ensure_default_roles()
         assert addiitonal_call == 0
@@ -237,7 +232,7 @@ class TestEnsureDefaultRoles:
 @pytest.mark.usefixtures("with_plugins", "clean_db")
 class TestAssignRoleToUser:
     def test_assign_role_to_user(self, user_factory):
-        """Test assigning a role to a user"""
+        """Test assigning a role to a user."""
         from ckanext.permissions import model as perm_model
 
         user = user_factory()
@@ -249,7 +244,7 @@ class TestAssignRoleToUser:
         assert const.Roles.Administrator.value in role_ids
 
     def test_assign_duplicate_role(self, user_factory):
-        """Test that assigning the same role twice doesn't create duplicates"""
+        """Test that assigning the same role twice doesn't create duplicates."""
         from ckanext.permissions import model as perm_model
 
         user = user_factory()
@@ -265,7 +260,7 @@ class TestAssignRoleToUser:
 @pytest.mark.usefixtures("with_plugins", "clean_db")
 class TestRemoveRoleFromUser:
     def test_remove_role_from_user(self, user_factory):
-        """Test removing a role from a user"""
+        """Test removing a role from a user."""
         from ckanext.permissions import model as perm_model
 
         user = user_factory()
@@ -278,7 +273,7 @@ class TestRemoveRoleFromUser:
         assert const.Roles.Administrator.value not in role_ids
 
     def test_remove_role_doesnt_affect_other_roles(self, user_factory, test_role):
-        """Test that removing one role doesn't affect other roles"""
+        """Test that removing one role doesn't affect other roles."""
         from ckanext.permissions import model as perm_model
 
         user = user_factory()

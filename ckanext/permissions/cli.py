@@ -1,6 +1,6 @@
 import click
 
-import ckan.model as model
+from ckan import model
 
 import ckanext.permissions.const as perm_const
 from ckanext.permissions import model as perm_model
@@ -16,7 +16,7 @@ def permissions():
 
 @permissions.command()
 def init_default_roles():
-    """Create default roles (anonymous, authenticated, administrator) in the database"""
+    """Create default roles (anonymous, authenticated, administrator) in the database."""
     created_count = utils.ensure_default_roles()
 
     if created_count > 0:
@@ -30,7 +30,7 @@ def init_default_roles():
 @permissions.command()
 @click.argument("role", default=perm_const.Roles.Authenticated.value, required=False)
 def assign_default_user_roles(role: str):
-    """Assign automatic roles to users (initializes default roles if needed)"""
+    """Assign automatic roles to users (initializes default roles if needed)."""
     # Ensure default roles exist
     click.echo("Checking default roles...")
     created_count = utils.ensure_default_roles()
@@ -61,20 +61,13 @@ def assign_default_user_roles(role: str):
     help="User IDs to remove role from (if not specified, removes from all users)",
 )
 def remove_role_from_users(role: str, user_ids: tuple[str, ...]):
-    """Remove automatic roles from users"""
-    if user_ids:
-        users = (
-            model.Session.query(model.User).filter(model.User.id.in_(user_ids)).all()
-        )
-    else:
-        users = model.User.all()
+    """Remove automatic roles from users."""
+    users = model.Session.query(model.User).filter(model.User.id.in_(user_ids)).all() if user_ids else model.User.all()
 
     for user in users:
         utils.remove_role_from_user(user.id, role)
 
     if user_ids:
-        click.secho(
-            f"Role '{role}' removed from {len(users)} specified user(s)", fg="green"
-        )
+        click.secho(f"Role '{role}' removed from {len(users)} specified user(s)", fg="green")
     else:
         click.secho(f"Role '{role}' removed from all users", fg="green")

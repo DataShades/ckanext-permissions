@@ -5,9 +5,8 @@ import ckan.plugins.toolkit as tk
 from ckan import types
 
 from ckanext.permissions import const as perm_const
-from ckanext.permissions import implementation
+from ckanext.permissions import implementation, utils
 from ckanext.permissions import types as perm_types
-from ckanext.permissions import utils
 
 
 @tk.blanket.cli
@@ -50,7 +49,7 @@ class PermissionsPlugin(implementation.PermissionLabels, p.SingletonPlugin):
         data_dict: types.DataDict,
         result: types.DataDict,
     ):
-        """Assign the default user role to a new user
+        """Assign the default user role to a new user.
 
         Args:
             action_name: The name of the action
@@ -58,10 +57,7 @@ class PermissionsPlugin(implementation.PermissionLabels, p.SingletonPlugin):
             data_dict: The action payload
             result: The action result
         """
-
         if action_name != "user_create":
             return
 
-        utils.assign_role_to_user(
-            result["id"], perm_const.Roles.Authenticated.value, "global"
-        )
+        utils.assign_role_to_user(result["id"], perm_const.Roles.Authenticated.value, "global")
