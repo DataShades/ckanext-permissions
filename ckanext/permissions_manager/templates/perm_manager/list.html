@@ -9,7 +9,7 @@
 {% block primary_content_inner %}
     {% set registered_roles = h.get_registered_roles() %}
 
-    <div class="d-flex gap-3 align-items-center mb-3">
+    <div class="d-flex gap-3 align-items-center">
         <div class="flex-grow-1">
             {% call form.input(
                 'search_permissions',
@@ -71,7 +71,7 @@
 
                         {% for permission in perm_group.permissions %}
                             <tr class="perm-permission-row" data-group="{{ group_index }}" data-search="{{ permission.label }} {{ permission.key }} {{ permission.description or '' }}">
-                                <td class="ps-4">
+                                <td class="ps-1">
                                     <p class="m-0">{{ permission.label }}</p>
 
                                     {% if permission.description %}
