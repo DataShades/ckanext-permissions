@@ -267,12 +267,27 @@ class EditUserRole(MethodView):
                 extra_vars={"user": user, "data": data, "errors": errors},
             )
 
+        old_roles = set(tk.h.get_user_roles(user.id, scope, scope_id))
+
         perm_model.UserRole.clear_user_roles(user.id, scope, scope_id, commit=False)
 
         for role in data["roles"]:
             perm_model.UserRole.create(user_id=user.id, role=role, scope=scope, scope_id=scope_id, commit=False)
 
         model.Session.commit()
+
+        new_roles = set(data["roles"])
+
+        if old_roles != new_roles:
+            log.info(
+                "User roles updated: user=%s scope=%s scope_id=%s added=%s removed=%s actor=%s",
+                user.name,
+                scope,
+                scope_id,
+                sorted(new_roles - old_roles),
+                sorted(old_roles - new_roles),
+                tk.current_user.name,
+            )
 
         tk.h.flash_success("User roles updated")
 

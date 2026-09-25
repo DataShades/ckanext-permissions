@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 
 import pytest
@@ -18,6 +19,12 @@ class TestPermissionRoleCreate:
         assert result["id"] == "admin"
         assert result["label"] == "Admin"
         assert result["description"] == "Admin role"
+
+    def test_permission_role_create_is_logged(self, caplog):
+        with caplog.at_level(logging.INFO, logger="ckanext.permissions.logic.action"):
+            call_action("permission_role_create", id="admin", label="Admin", description="Admin role")
+
+        assert "Role created: role=admin" in caplog.text
 
     @pytest.mark.parametrize("field", ["id", "label", "description"])
     def test_permission_role_create_missing_required_fields(self, field):

@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 import ckan.plugins.toolkit as tk
@@ -65,3 +67,24 @@ class TestInvalidInput:
 
         user_roles = perm_model.UserRole.get(user["id"], const.SCOPE_ORGANIZATION, organization["id"])
         assert [role.role_id for role in user_roles] == [const.Roles.Administrator.value]
+
+
+@pytest.mark.ckan_config("ckan.plugins", "permissions permissions_manager")
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestAuditLog:
+    def test_user_roles_update_is_logged(self, app, sysadmin, user, caplog):
+        url = tk.h.url_for("perm_manager.edit_user_role", user_id=user["id"])
+
+        with caplog.at_level(logging.INFO, logger="ckanext.permissions_manager.views"):
+            app.post(
+                url,
+                data={"roles": [const.Roles.Administrator.value]},
+                headers={"Authorization": sysadmin["token"]},
+                follow_redirects=False,
+                status=302,
+            )
+
+        assert (
+            f"User roles updated: user={user['name']} scope=global scope_id=None "
+            f"added=['administrator'] removed=['authenticated'] actor={sysadmin['name']}"
+        ) in caplog.text

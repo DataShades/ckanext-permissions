@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 from typing import cast
 
 import ckan.plugins.toolkit as tk
@@ -12,11 +13,17 @@ from ckanext.permissions import types as perm_types
 from ckanext.permissions import utils as perm_utils
 from ckanext.permissions.logic import schema
 
+log = logging.getLogger(__name__)
+
 
 @validate(schema.role_create)
 def permission_role_create(context: Context, data_dict: DataDict) -> perm_types.Role:
     tk.check_access("manage_user_roles", context, data_dict)
-    return perm_model.Role.create(**data_dict).dictize(context)
+
+    role = perm_model.Role.create(**data_dict)
+    log.info("Role created: role=%s actor=%s", role.id, context.get("user"))
+
+    return role.dictize(context)
 
 
 @validate(schema.role_delete)
@@ -25,6 +32,7 @@ def permission_role_delete(context: Context, data_dict: DataDict) -> None:
 
     if role := perm_model.Role.get(data_dict["id"]):
         role.delete()
+        log.info("Role deleted: role=%s actor=%s", data_dict["id"], context.get("user"))
 
 
 @validate(schema.role_update)
@@ -33,7 +41,16 @@ def permission_role_update(context: Context, data_dict: DataDict) -> perm_types.
 
     role = cast(perm_model.Role, perm_model.Role.get(data_dict["id"]))
 
+    old_description = role.description
     role.update(data_dict["description"])
+
+    log.info(
+        "Role updated: role=%s description=%r -> %r actor=%s",
+        role.id,
+        old_description,
+        role.description,
+        context.get("user"),
+    )
 
     return role.dictize(context)
 
@@ -79,6 +96,16 @@ def permissions_update(context: Context, data_dict: DataDict) -> DataDict:
         updated_permissions[permission_key] = permission_data
 
     model.Session.commit()
+
+    for permission_key, permission_data in updated_permissions.items():
+        for role_id, flag in permission_data.items():
+            log.info(
+                "Permission %s: permission=%s role=%s actor=%s",
+                "granted" if flag else "revoked",
+                permission_key,
+                role_id,
+                context.get("user"),
+            )
 
     return {
         "updated_permissions": updated_permissions,

@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 
 import ckan.plugins.toolkit as tk
@@ -54,6 +56,18 @@ class TestPermissionsUpdate:
 
         assert not perm_model.RolePermission.get("anonymous", "perm_1")
         assert perm_model.RolePermission.get("authenticated", "perm_1")
+
+    def test_permission_changes_are_logged(self, caplog):
+        call_action("permissions_update", permissions={"perm_1": {"anonymous": True}})
+
+        with caplog.at_level(logging.INFO, logger="ckanext.permissions.logic.action"):
+            call_action(
+                "permissions_update",
+                permissions={"perm_1": {"anonymous": False, "authenticated": True}},
+            )
+
+        assert "Permission revoked: permission=perm_1 role=anonymous" in caplog.text
+        assert "Permission granted: permission=perm_1 role=authenticated" in caplog.text
 
     def test_permissions_update_unregistered_permission_key(self):
         result = call_action("permissions_update", permissions={"xxx": {}})
