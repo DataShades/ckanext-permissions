@@ -6,6 +6,8 @@ import pytest
 import ckan.plugins.toolkit as tk
 from ckan.tests.helpers import call_action
 
+from ckanext.permissions import model as perm_model
+
 
 @pytest.mark.usefixtures("with_plugins", "clean_db")
 class TestPermissionRoleCreate:
@@ -72,6 +74,13 @@ class TestPermissionRoleDelete:
             call_action("permission_role_delete", id="xxx")
 
         assert e.value.error_dict["id"] == ["Role xxx doesn't exists"]
+
+    def test_permission_role_delete_removes_its_permissions(self, test_role: dict[str, Any]):
+        call_action("permissions_update", permissions={"perm_1": {test_role["id"]: True}})
+
+        call_action("permission_role_delete", id=test_role["id"])
+
+        assert perm_model.RolePermission.get(test_role["id"], "perm_1") is None
 
     def test_permission_role_delete_missing_id(self):
         with pytest.raises(tk.ValidationError) as e:

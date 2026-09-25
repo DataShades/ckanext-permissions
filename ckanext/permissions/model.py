@@ -181,7 +181,7 @@ class UserRole(tk.BaseModel):
 class RolePermission(tk.BaseModel):
     __tablename__ = "perm_role_permission"
 
-    role_id = Column(String, ForeignKey("perm_role.id"), primary_key=True)
+    role_id = Column(String, ForeignKey("perm_role.id", ondelete="CASCADE"), primary_key=True)
     permission = Column(String, primary_key=True)
 
     @classmethod
