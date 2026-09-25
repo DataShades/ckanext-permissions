@@ -1,6 +1,7 @@
 import pytest
 
 import ckan.plugins.toolkit as tk
+from ckan import model
 from ckan.tests.helpers import call_action
 
 from ckanext.permissions import model as perm_model
@@ -41,6 +42,18 @@ class TestPermissionsUpdate:
         )
 
         assert perm_model.RolePermission.get("anonymous", "perm_1")
+
+    def test_permissions_grant_and_revoke_are_committed(self):
+        call_action("permissions_update", permissions={"perm_1": {"anonymous": True}})
+
+        call_action(
+            "permissions_update",
+            permissions={"perm_1": {"anonymous": False, "authenticated": True}},
+        )
+        model.Session.rollback()
+
+        assert not perm_model.RolePermission.get("anonymous", "perm_1")
+        assert perm_model.RolePermission.get("authenticated", "perm_1")
 
     def test_permissions_update_unregistered_permission_key(self):
         result = call_action("permissions_update", permissions={"xxx": {}})

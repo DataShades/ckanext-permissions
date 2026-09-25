@@ -23,11 +23,13 @@ class Role(tk.BaseModel):
     description = Column(String, nullable=False)
 
     @classmethod
-    def create(cls, id: str, label: str, description: str) -> Self:
+    def create(cls, id: str, label: str, description: str, commit: bool = True) -> Self:
         role = cls(id=id, label=label, description=description)
 
         model.Session.add(role)
-        model.Session.commit()
+
+        if commit:
+            model.Session.commit()
 
         return role
 
@@ -88,6 +90,7 @@ class UserRole(tk.BaseModel):
         role: str,
         scope: str = perm_const.SCOPE_GLOBAL,
         scope_id: str | None = None,
+        commit: bool = True,
     ) -> Self:
         query: Query = model.Session.query(cls).filter(cls.user_id == user_id, cls.role_id == role, cls.scope == scope)
 
@@ -100,12 +103,14 @@ class UserRole(tk.BaseModel):
         user_role = cls(user_id=user_id, role_id=role, scope=scope, scope_id=scope_id)
 
         model.Session.add(user_role)
-        model.Session.commit()
+
+        if commit:
+            model.Session.commit()
 
         return user_role
 
     @classmethod
-    def clear_user_roles(cls, user_id: str, scope: str = "", scope_id: str | None = None) -> None:
+    def clear_user_roles(cls, user_id: str, scope: str = "", scope_id: str | None = None, commit: bool = True) -> None:
         perm = model.Session.query(UserRole).filter(UserRole.user_id == user_id)
 
         if scope:
@@ -114,7 +119,9 @@ class UserRole(tk.BaseModel):
                 perm = perm.filter_by(scope_id=scope_id)
 
         perm.delete()
-        model.Session.commit()
+
+        if commit:
+            model.Session.commit()
 
     @classmethod
     def delete(cls, user_id: str, role: str, scope: str = perm_const.SCOPE_GLOBAL, scope_id: str | None = None) -> None:
@@ -140,16 +147,18 @@ class RolePermission(tk.BaseModel):
         return query.one_or_none()
 
     @classmethod
-    def create(cls, role_id: str, permission: str, defer_commit: bool = True) -> Self:
+    def create(cls, role_id: str, permission: str, commit: bool = True) -> Self:
         role_permission = cls(role_id=role_id, permission=permission)
 
         model.Session.add(role_permission)
 
-        if defer_commit:
+        if commit:
             model.Session.commit()
 
         return role_permission
 
-    def delete(self) -> None:
-        model.Session().autoflush = False
+    def delete(self, commit: bool = True) -> None:
         model.Session.delete(self)
+
+        if commit:
+            model.Session.commit()

@@ -247,7 +247,9 @@ def ensure_default_roles() -> int:
     for role_id, label, description in default_roles:
         existing_role = perm_model.Role.get(role_id)
         if not existing_role:
-            perm_model.Role.create(role_id, label, description)
+            perm_model.Role.create(role_id, label, description, commit=False)
             created_count += 1
+
+    model.Session.commit()
 
     return created_count

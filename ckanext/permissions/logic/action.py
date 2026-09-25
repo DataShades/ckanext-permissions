@@ -70,9 +70,9 @@ def permissions_update(context: Context, data_dict: DataDict) -> DataDict:
                 continue
 
             if not flag and role_permission:
-                role_permission.delete()
+                role_permission.delete(commit=False)
             else:
-                perm_model.RolePermission.create(role_id, permission_key)
+                perm_model.RolePermission.create(role_id, permission_key, commit=False)
 
             permission_data[role_id] = flag
 
