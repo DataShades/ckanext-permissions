@@ -22,8 +22,6 @@ jobs:
             ckan-image: "2.12-py3.14"
           - ckan-version: "2.11"
             ckan-image: "2.11"
-          - ckan-version: "2.10"
-            ckan-image: "2.10"
 
     name: Test CKAN ${{ matrix.ckan-version }}
 

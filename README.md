@@ -54,12 +54,11 @@ To stop users from raising their own access, `manage_dataset_collaborators` can'
 
 Compatibility with core CKAN versions:
 
-| CKAN version    | Compatible?   |
-| --------------- | ------------- |
-| 2.9 and earlier | no            |
-| 2.10+           | yes           |
-| 2.11+           | yes           |
-| 2.12+           | yes           |
+| CKAN version     | Compatible?   |
+| ---------------- | ------------- |
+| 2.10 and earlier | no            |
+| 2.11+            | yes           |
+| 2.12+            | yes           |
 
 
 ## Installation

@@ -183,7 +183,10 @@ class BaseUserRolesList(MethodView):
             (sa.func.trim(model.User.fullname) != "", model.User.fullname),
             else_=model.User.name,
         )
-        query = model.Session.query(model.User).filter(model.User.state == model.State.ACTIVE)
+        query = model.Session.query(model.User).filter(
+            model.User.state == model.State.ACTIVE,
+            sa.func.trim(model.User.email) != "",
+        )
 
         q = tk.request.args.get("q", "").strip().lower()
         role_filter = tk.request.args.get("role", "").strip()
@@ -199,7 +202,7 @@ class BaseUserRolesList(MethodView):
         if role_filter:
             query = query.filter(self._has_role(role_filter, scope, scope_id))
 
-        return query.order_by(display_name, model.User.name)
+        return query.order_by(sa.func.lower(display_name), model.User.name)
 
     def _has_role(self, role_id: str, scope: str, scope_id: str | None) -> Any:
         user_role = perm_model.UserRole
