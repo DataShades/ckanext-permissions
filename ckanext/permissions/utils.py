@@ -109,7 +109,10 @@ def get_registered_roles() -> dict[str, str]:
 
 
 def check_permission(
-    permission: str, user: model.User | model.AnonymousUser, scope: str = "global"
+    permission: str,
+    user: model.User | model.AnonymousUser,
+    scope: str = "global",
+    scope_id: str | None = None,
 ) -> bool:
     """Check if user has the given permission through any of their roles.
 
@@ -117,6 +120,7 @@ def check_permission(
         permission: The permission key to check
         user: The user to check permissions for
         scope: The scope of the role
+        scope_id: The scope ID of the role, e.g. an organization ID
 
     Returns:
         bool: True if user has the permission, False otherwise
@@ -128,7 +132,7 @@ def check_permission(
         )
 
     for role in user.roles:  # type: ignore
-        if scope not in role.scope:
+        if role.scope != scope or role.scope_id != scope_id:
             continue
 
         if perm_model.RolePermission.get(str(role.role_id), permission) is not None:

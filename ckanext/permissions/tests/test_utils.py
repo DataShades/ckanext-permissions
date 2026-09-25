@@ -1,6 +1,7 @@
-import pytest
+from typing import cast
 
 import ckan.plugins.toolkit as tk
+import pytest
 from ckan import model
 from ckan.tests.helpers import call_action
 
@@ -187,6 +188,24 @@ class TestCheckPermission:
         )
 
         assert utils.check_permission("perm_1", anon_user)
+
+    def test_scoped_role(self, user_factory, test_role, organization_factory):
+        from ckanext.permissions import model as perm_model
+
+        user = cast(model.User, model.User.get(user_factory()["id"]))
+        org = organization_factory()
+        other_org = organization_factory()
+
+        call_action(
+            "permissions_update",
+            permissions={"perm_1": {test_role["id"]: True}},
+        )
+        perm_model.UserRole.create(user.id, test_role["id"], "organization", org["id"])
+
+        assert utils.check_permission("perm_1", user, "organization", org["id"])
+        assert not utils.check_permission("perm_1", user, "organization", other_org["id"])
+        assert not utils.check_permission("perm_1", user, "org", org["id"])
+        assert not utils.check_permission("perm_1", user)
 
 
 @pytest.mark.usefixtures("with_plugins", "clean_db")
