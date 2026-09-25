@@ -18,7 +18,11 @@ permissions:
   - key: delete_any_dataset
     label: Delete any dataset
     description: User can delete any dataset
+    depends_on:
+      - read_any_dataset
 
   - key: delete_any_resource
     label: Delete any resource
     description: User can delete any resource
+    depends_on:
+      - update_any_dataset

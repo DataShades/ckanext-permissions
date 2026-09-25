@@ -125,6 +125,44 @@ class TestParsePermissionGroupsValidation:
             }
         )
 
+    def test_depends_on_permission_in_another_group(self):
+        validate_groups(
+            {
+                "first": PermissionGroup(
+                    name="first", description="xxx", permissions=[PermissionDefinition(key="read", label="Read")]
+                ),
+                "second": PermissionGroup(
+                    name="second",
+                    description="xxx",
+                    permissions=[PermissionDefinition(key="write", label="Write", depends_on=["read"])],
+                ),
+            }
+        )
+
+    def test_depends_on_unknown_permission(self):
+        with pytest.raises(tk.ValidationError, match="depends on unknown permission missing"):
+            validate_groups(
+                {
+                    "new_group": PermissionGroup(
+                        name="xxx",
+                        description="xxx",
+                        permissions=[PermissionDefinition(key="xxx", label="xxx", depends_on=["missing"])],
+                    )
+                }
+            )
+
+    def test_depends_on_itself(self):
+        with pytest.raises(tk.ValidationError, match="depends on itself"):
+            validate_groups(
+                {
+                    "new_group": PermissionGroup(
+                        name="xxx",
+                        description="xxx",
+                        permissions=[PermissionDefinition(key="xxx", label="xxx", depends_on=["xxx"])],
+                    )
+                }
+            )
+
 
 @pytest.mark.usefixtures("with_plugins")
 class TestLoadSchemas:
@@ -170,6 +208,18 @@ class TestGetPermissions:
 
         assert isinstance(result, dict)
         assert result["perm_1"] == PermissionDefinition(key="perm_1", label="Permission 1")
+
+    def test_get_permission_dependencies(self):
+        assert utils.get_permission_dependencies("update_any_dataset") == ["read_any_dataset"]
+        assert utils.get_permission_dependencies("delete_any_dataset") == ["read_any_dataset"]
+        assert utils.get_permission_dependencies("delete_any_resource") == ["update_any_dataset"]
+        assert utils.get_permission_dependencies("perm_1") == []
+        assert utils.get_permission_dependencies("missing") == []
+
+    def test_get_permission_dependents(self):
+        assert utils.get_permission_dependents("read_any_dataset") == ["update_any_dataset", "delete_any_dataset"]
+        assert utils.get_permission_dependents("update_any_dataset") == ["delete_any_resource"]
+        assert utils.get_permission_dependents("delete_any_resource") == []
 
 
 @pytest.mark.usefixtures("with_plugins", "clean_db")

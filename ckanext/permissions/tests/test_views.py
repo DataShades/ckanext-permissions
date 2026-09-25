@@ -236,3 +236,12 @@ class TestForms:
         self._post(app, sysadmin, url, {"roles": roles})
 
         assert sorted(tk.h.get_user_roles(user["id"])) == sorted(roles)
+
+    def test_permissions_page_shows_dependencies(self, app, sysadmin):
+        body = app.get(
+            tk.h.url_for("perm_manager.permission_list"), headers={"Authorization": sysadmin["token"]}, status=200
+        ).body
+
+        assert "Requires:" in body
+        assert 'data-permission="update_any_dataset"' in body
+        assert 'data-depends-on="read_any_dataset"' in body

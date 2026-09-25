@@ -63,7 +63,7 @@ def _load_schema(path: str):
 
 
 def validate_groups(groups: dict[str, perm_types.PermissionGroup]) -> bool:
-    permissions = []
+    dependencies: dict[str, list[str]] = {}
 
     for group in groups.values():
         data, errors = tk.navl_validate(cast(dict, group), perm_schema.permission_group_schema())
@@ -78,12 +78,50 @@ def validate_groups(groups: dict[str, perm_types.PermissionGroup]) -> bool:
             raise tk.ValidationError("Permissions must be a list")
 
         for permission in data["permissions"]:
-            if permission["key"] in permissions:
+            if permission["key"] in dependencies:
                 raise tk.ValidationError(f"Permission {permission['key']} is duplicated")
 
-            permissions.append(permission["key"])
+            dependencies[permission["key"]] = permission.get("depends_on", [])
+
+    _validate_dependencies(dependencies)
 
     return True
+
+
+def _validate_dependencies(dependencies: dict[str, list[str]]) -> None:
+    for key, depends_on in dependencies.items():
+        for dependency in depends_on:
+            if dependency == key:
+                raise tk.ValidationError(f"Permission {key} depends on itself")
+
+            if dependency not in dependencies:
+                raise tk.ValidationError(f"Permission {key} depends on unknown permission {dependency}")
+
+
+def get_permission_dependencies(permission: str) -> list[str]:
+    """Get the permissions a role must have before it can be granted this one.
+
+    Args:
+        permission: The permission key
+
+    Returns:
+        list[str]: The keys of the required permissions
+    """
+    definition = get_permissions().get(permission)
+
+    return list(definition.get("depends_on", [])) if definition else []
+
+
+def get_permission_dependents(permission: str) -> list[str]:
+    """Get the permissions that require this one.
+
+    Args:
+        permission: The permission key
+
+    Returns:
+        list[str]: The keys of the dependent permissions
+    """
+    return [key for key, definition in get_permissions().items() if permission in definition.get("depends_on", [])]
 
 
 def get_permission_groups() -> list[perm_types.PermissionGroup]:

@@ -10,6 +10,19 @@ from ckan.tests.helpers import call_action, call_auth
 from ckanext.permissions import const, utils
 
 
+def _with_dependencies(permission: str) -> list[str]:
+    permissions = [permission]
+
+    for dependency in utils.get_permission_dependencies(permission):
+        permissions.extend(_with_dependencies(dependency))
+
+    return permissions
+
+
+def _grant(permission: str, role_id: str) -> None:
+    call_action("permissions_update", permissions={key: {role_id: True} for key in _with_dependencies(permission)})
+
+
 @pytest.fixture
 def org_scoped_user(
     user_factory: Callable[..., dict[str, Any]],
@@ -22,7 +35,7 @@ def org_scoped_user(
         user = user_factory()
         org = organization_factory()
 
-        call_action("permissions_update", permissions={permission: {test_role["id"]: True}})
+        _grant(permission, test_role["id"])
         utils.assign_role_to_user(user["id"], test_role["id"], const.SCOPE_ORGANIZATION, org["id"])
 
         return user, org
@@ -78,7 +91,7 @@ def global_user(
     def factory(permission: str) -> dict[str, Any]:
         user = user_factory()
 
-        call_action("permissions_update", permissions={permission: {test_role["id"]: True}})
+        _grant(permission, test_role["id"])
         utils.assign_role_to_user(user["id"], test_role["id"])
 
         return user
@@ -122,6 +135,14 @@ class TestGlobalAuth:
 
         with pytest.raises(tk.NotAuthorized):
             _call_dataset_auth(auth, user["name"], dataset, resource)
+
+    def test_resource_delete_action(self, global_user, dataset_factory, resource_factory):
+        user = global_user("delete_any_resource")
+        resource = resource_factory(package_id=dataset_factory(private=True)["id"])
+
+        call_action("resource_delete", {"user": user["name"], "ignore_auth": False}, id=resource["id"])
+
+        assert model.Resource.get(resource["id"]).state == model.State.DELETED
 
     def test_anonymous_role(self, dataset_factory):
         dataset = dataset_factory(private=True)

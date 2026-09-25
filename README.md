@@ -24,13 +24,15 @@ The extension provides a way to assign roles to users. Roles could be global and
 
 ### Default permissions
 
-| Permission             | Grants                                              |
-| ---------------------- | --------------------------------------------------- |
-| `read_any_dataset`     | View any dataset, including private ones            |
-| `read_private_dataset` | View private datasets                               |
-| `update_any_dataset`   | Edit any dataset                                    |
-| `delete_any_dataset`   | Delete any dataset                                  |
-| `delete_any_resource`  | Delete any resource                                 |
+| Permission             | Grants                                   | Requires             |
+| ---------------------- | ---------------------------------------- | -------------------- |
+| `read_any_dataset`     | View any dataset, including private ones |                      |
+| `read_private_dataset` | View private datasets                    |                      |
+| `update_any_dataset`   | Edit any dataset                         | `read_any_dataset`   |
+| `delete_any_dataset`   | Delete any dataset                       | `read_any_dataset`   |
+| `delete_any_resource`  | Delete any resource                      | `update_any_dataset` |
+
+A role can only be given a permission if it also has the permissions it requires, because CKAN needs them to carry out the action: editing and deleting a dataset in the UI first load it as the user, and deleting a resource is saved as an update of its dataset.
 
 A permission granted through a global role applies to every dataset. Through a role scoped to an organization, it applies only to that organization's datasets. The permissions add access on top of CKAN's own rules; they never take it away.
 
@@ -110,12 +112,21 @@ Each file defines one group of permissions, shown as a section on the permission
 name: My extension
 description: Permissions for my extension
 permissions:
+  - key: review_dataset
+    label: Review dataset
+
   - key: approve_dataset
     label: Approve dataset
     description: User can approve datasets  # optional
+    depends_on:  # optional
+      - review_dataset
 ```
 
 `name`, `description` and at least one permission are required, and every permission needs a `key` and a `label`. Keys must be unique across all loaded groups. Invalid groups stop CKAN from starting.
+
+`depends_on` lists permissions a role must have before it can be given this one; they can come from any loaded group. Saving the permissions page fails if a role would end up with a permission but not its dependencies, including when a dependency is removed while the permission is kept. On the page, ticking a permission also ticks its dependencies for that role, and unticking a dependency unticks the permissions that need it. The rule applies when permissions are saved, so grants made before a dependency was added keep working until they're edited.
+
+Use `depends_on` only when a permission can't work without another one, not to express that one permission is broader than another. List direct requirements only; they're followed in a chain, so `delete_any_resource` requires `update_any_dataset`, which in turn requires `read_any_dataset`.
 
 Your extension checks its own permissions with `ckanext.permissions.utils.check_permission(key, user)`, or `check_package_permission(key, user, package)` to include roles scoped to the dataset's organization.
 

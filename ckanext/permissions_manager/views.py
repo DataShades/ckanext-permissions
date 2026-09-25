@@ -39,6 +39,7 @@ class PermissionManagerView(MethodView):
             "perm_manager/list.html",
             extra_vars={
                 "permission_groups": utils.get_permission_groups(),
+                "permissions": utils.get_permissions(),
             },
         )
 

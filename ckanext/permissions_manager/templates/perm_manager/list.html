@@ -32,7 +32,7 @@
         {{ h.csrf_input() }}
 
         <div class="table-responsive">
-            <table class="table" id="permissions-table" style="table-layout: fixed;">
+            <table class="table" id="permissions-table" style="table-layout: fixed;" data-module="perm-permission-dependencies">
                 <thead>
                     <tr>
                         <th>{{ _("Permission") }}</th>
@@ -63,6 +63,13 @@
                                     {% if permission.description %}
                                         <p class="m-0 mt-2"><i>{{ permission.description }}</i></p>
                                     {% endif %}
+
+                                    {% if permission.depends_on %}
+                                        <p class="m-0 mt-2 text-muted">
+                                            {{ _("Requires:") }}
+                                            {% for dependency in permission.depends_on %}{{ permissions[dependency].label }}{% if not loop.last %}, {% endif %}{% endfor %}
+                                        </p>
+                                    {% endif %}
                                 </td>
 
                                 {% for role_id in registered_roles %}
@@ -71,7 +78,7 @@
                                     <td>
                                         <div class="checkbox-wrapper">
                                             <input type='hidden' value='unset' name='{{ permission.key }}|{{ role_id }}'>
-                                            <input type="checkbox" id="{{ role_id }}-{{ key }}" name="{{ permission.key }}|{{ role_id }}" value="set" {{ 'checked' if h.get_role_permissions(role_id, permission.key) }}/>
+                                            <input type="checkbox" id="{{ role_id }}-{{ key }}" name="{{ permission.key }}|{{ role_id }}" value="set" data-permission="{{ permission.key }}" data-role="{{ role_id }}" data-depends-on="{{ (permission.depends_on or []) | join(' ') }}" {{ 'checked' if h.get_role_permissions(role_id, permission.key) }}/>
                                             <label for="{{ role_id }}-{{ key }}" class="toggle">
                                                 <span></span>
                                             </label>

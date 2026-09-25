@@ -15,6 +15,7 @@ class PermissionDefinition(TypedDict):
     key: str
     label: str
     description: NotRequired[str | None]
+    depends_on: NotRequired[list[str]]
 
 
 class PermissionRoleDefinition(TypedDict):

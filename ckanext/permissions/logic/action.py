@@ -95,6 +95,12 @@ def permissions_update(context: Context, data_dict: DataDict) -> DataDict:
 
         updated_permissions[permission_key] = permission_data
 
+    model.Session.flush()
+
+    if errors := _check_dependencies(updated_permissions):
+        model.Session.rollback()
+        raise tk.ValidationError(errors)
+
     model.Session.commit()
 
     for permission_key, permission_data in updated_permissions.items():
@@ -111,6 +117,33 @@ def permissions_update(context: Context, data_dict: DataDict) -> DataDict:
         "updated_permissions": updated_permissions,
         "missing_permissions": missing_permissions,
     }
+
+
+def _check_dependencies(updated_permissions: dict[str, dict[str, bool]]) -> dict[str, list[str]]:
+    errors: dict[str, list[str]] = {}
+
+    for permission_key, roles_data in updated_permissions.items():
+        for role_id, granted in roles_data.items():
+            if granted:
+                missing = [
+                    dependency
+                    for dependency in perm_utils.get_permission_dependencies(permission_key)
+                    if not perm_model.RolePermission.get(role_id, dependency)
+                ]
+                if missing:
+                    errors.setdefault(permission_key, []).append(f"Role {role_id} also needs: {', '.join(missing)}")
+            else:
+                dependents = [
+                    dependent
+                    for dependent in perm_utils.get_permission_dependents(permission_key)
+                    if perm_model.RolePermission.get(role_id, dependent)
+                ]
+                if dependents:
+                    errors.setdefault(permission_key, []).append(
+                        f"Role {role_id} still has permissions that depend on it: {', '.join(dependents)}"
+                    )
+
+    return errors
 
 
 def _validate_permission_data(data: DataDict) -> None:

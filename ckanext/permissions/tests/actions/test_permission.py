@@ -93,3 +93,66 @@ class TestPermissionsUpdate:
     def test_role_id_not_exists(self):
         with pytest.raises(tk.ValidationError, match="Role xxx doesn't exists"):
             call_action("permissions_update", permissions={"perm_1": {"xxx": True}})
+
+
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestPermissionDependencies:
+    @pytest.mark.parametrize(
+        ("permission", "dependency"),
+        [
+            ("update_any_dataset", "read_any_dataset"),
+            ("delete_any_dataset", "read_any_dataset"),
+            ("delete_any_resource", "update_any_dataset"),
+        ],
+    )
+    def test_grant_without_dependency_is_rejected(self, permission, dependency):
+        with pytest.raises(tk.ValidationError, match=f"also needs: {dependency}"):
+            call_action("permissions_update", permissions={permission: {"authenticated": True}})
+
+        assert not perm_model.RolePermission.get("authenticated", permission)
+
+    def test_grant_with_dependency_in_same_request(self):
+        call_action(
+            "permissions_update",
+            permissions={
+                "read_any_dataset": {"authenticated": True},
+                "update_any_dataset": {"authenticated": True},
+            },
+        )
+
+        assert perm_model.RolePermission.get("authenticated", "update_any_dataset")
+
+    def test_revoke_dependency_of_granted_permission_is_rejected(self):
+        call_action(
+            "permissions_update",
+            permissions={
+                "read_any_dataset": {"authenticated": True},
+                "update_any_dataset": {"authenticated": True},
+            },
+        )
+
+        with pytest.raises(tk.ValidationError, match="depend on it: update_any_dataset"):
+            call_action("permissions_update", permissions={"read_any_dataset": {"authenticated": False}})
+
+        assert perm_model.RolePermission.get("authenticated", "read_any_dataset")
+
+    def test_revoke_dependency_with_dependents_in_same_request(self):
+        permissions = {"read_any_dataset": {"authenticated": True}, "update_any_dataset": {"authenticated": True}}
+        call_action("permissions_update", permissions=permissions)
+
+        call_action(
+            "permissions_update",
+            permissions={
+                "read_any_dataset": {"authenticated": False},
+                "update_any_dataset": {"authenticated": False},
+            },
+        )
+
+        assert not perm_model.RolePermission.get("authenticated", "read_any_dataset")
+        assert not perm_model.RolePermission.get("authenticated", "update_any_dataset")
+
+    def test_dependency_is_per_role(self):
+        call_action("permissions_update", permissions={"read_any_dataset": {"administrator": True}})
+
+        with pytest.raises(tk.ValidationError, match="Role authenticated also needs"):
+            call_action("permissions_update", permissions={"update_any_dataset": {"authenticated": True}})
