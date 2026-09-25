@@ -3,6 +3,7 @@ import pytest
 from ckan.tests.helpers import call_action
 
 from ckanext.permissions import const, helpers, model
+from ckanext.permissions_manager.helpers import permission_get_registered_roles_options
 
 
 @pytest.mark.usefixtures("with_plugins", "clean_db")
@@ -65,3 +66,14 @@ class TestIsDefaultRole:
 
     def test_is_not_default_role(self, test_role: dict[str, str]):
         assert not helpers.is_default_role("test_role")
+
+
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestRegisteredRolesOptions:
+    def test_only_anonymous_is_excluded(self, role_factory):
+        role_factory(id="anon", label="Anon")
+
+        values = [option["value"] for option in permission_get_registered_roles_options()]
+
+        assert const.Roles.Anonymous.value not in values
+        assert "anon" in values
