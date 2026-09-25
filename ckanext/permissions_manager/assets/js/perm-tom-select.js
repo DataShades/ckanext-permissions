@@ -4,13 +4,9 @@ ckan.module("perm-tom-select", function ($) {
             valueField: "value",
             labelField: "text",
             plugins: {
-                remove_button: {
-                    title: 'Remove this item',
-                },
+                remove_button: {},
                 dropdown_input: {},
-                clear_button: {
-                    title: 'Remove all selected options',
-                }
+                clear_button: {},
             },
             loadUrl: null,
             create: true,
@@ -24,6 +20,9 @@ ckan.module("perm-tom-select", function ($) {
                 console.error("[bulk-tom-select] TomSelect library is not loaded");
                 return
             }
+
+            this.options.plugins.remove_button.title = this._("Remove this item");
+            this.options.plugins.clear_button.title = this._("Remove all selected options");
 
             if (this.options.loadUrl) {
                 this.options.load = this._loadOptions;

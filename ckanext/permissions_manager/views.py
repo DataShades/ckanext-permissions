@@ -50,7 +50,7 @@ class PermissionManagerView(MethodView):
             tk.h.flash_error(str(e))
             return tk.redirect_to("perm_manager.permission_list")
 
-        tk.h.flash_success("Permissions updated")
+        tk.h.flash_success(tk._("Permissions updated"))
 
         return tk.redirect_to("perm_manager.permission_list")
 
@@ -104,7 +104,7 @@ class RoleAdd(MethodView):
                 extra_vars={"errors": e.error_dict, "data": payload},
             )
 
-        tk.h.flash_success("Role has been created")
+        tk.h.flash_success(tk._("Role has been created"))
 
         return tk.redirect_to("perm_manager.role_list")
 
@@ -118,7 +118,7 @@ class RoleDelete(MethodView):
         except tk.ValidationError as e:
             tk.h.flash_error(str(e))
         else:
-            tk.h.flash_success("Role has been deleted")
+            tk.h.flash_success(tk._("Role has been deleted"))
 
         return tk.redirect_to("perm_manager.role_list")
 
@@ -139,6 +139,7 @@ class RoleEdit(MethodView):
                 {},
                 {
                     "id": role_id,
+                    "label": payload.get("label"),
                     "description": payload.get("description"),
                 },
             )
@@ -152,7 +153,7 @@ class RoleEdit(MethodView):
                 },
             )
 
-        tk.h.flash_success("Role has been updated")
+        tk.h.flash_success(tk._("Role has been updated"))
 
         return tk.redirect_to("perm_manager.role_list")
 
@@ -266,7 +267,7 @@ class EditUserRole(MethodView):
         user = model.User.get(user_id)
 
         if not user:
-            return tk.abort(404, "User not found")
+            return tk.abort(404, tk._("User not found"))
 
         return tk.render(
             "perm_manager/edit_user_roles.html",
@@ -286,7 +287,7 @@ class EditUserRole(MethodView):
         user = model.User.get(user_id)
 
         if not user:
-            tk.abort(404, "User not found")
+            tk.abort(404, tk._("User not found"))
 
         data, errors = tk.navl_validate(payload, self.schema)
 
@@ -318,7 +319,7 @@ class EditUserRole(MethodView):
                 tk.current_user.name,
             )
 
-        tk.h.flash_success("User roles updated")
+        tk.h.flash_success(tk._("User roles updated"))
 
         return (
             tk.redirect_to("perm_manager.user_roles_list")
@@ -332,7 +333,7 @@ class OrganizationEditUserRole(EditUserRole):
         user = model.User.get(user_id)
 
         if not user:
-            return tk.abort(404, "User not found")
+            return tk.abort(404, tk._("User not found"))
 
         org_dict = _get_org_dict(org_id)
         scope = perm_const.SCOPE_ORGANIZATION

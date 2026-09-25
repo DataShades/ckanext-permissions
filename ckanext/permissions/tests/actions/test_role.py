@@ -54,7 +54,7 @@ class TestPermissionRoleCreate:
                 description="Another admin role",
             )
 
-        assert e.value.error_dict["id"] == ["Role admin is already exists"]
+        assert e.value.error_dict["id"] == ["Role admin already exists"]
 
 
 @pytest.mark.usefixtures("with_plugins", "clean_db")
@@ -73,7 +73,7 @@ class TestPermissionRoleDelete:
         with pytest.raises(tk.ValidationError) as e:
             call_action("permission_role_delete", id="xxx")
 
-        assert e.value.error_dict["id"] == ["Role xxx doesn't exists"]
+        assert e.value.error_dict["id"] == ["Role xxx doesn't exist"]
 
     def test_permission_role_delete_removes_its_permissions(self, test_role: dict[str, Any]):
         call_action("permissions_update", permissions={"perm_1": {test_role["id"]: True}})
@@ -92,7 +92,7 @@ class TestPermissionRoleDelete:
         with pytest.raises(tk.ValidationError) as e:
             call_action("permission_role_delete", id="xxx")
 
-        assert e.value.error_dict["id"] == ["Role xxx doesn't exists"]
+        assert e.value.error_dict["id"] == ["Role xxx doesn't exist"]
 
 
 @pytest.mark.usefixtures("with_plugins", "clean_db")
@@ -102,6 +102,23 @@ class TestPermissionRoleUpdate:
 
         assert result["id"] == test_role["id"]
         assert result["description"] == "New description"
+
+    def test_permission_role_update_label(self, test_role: dict[str, Any]):
+        result = call_action("permission_role_update", id=test_role["id"], label="Renamed", description="Updated")
+
+        assert result["label"] == "Renamed"
+        assert result["description"] == "Updated"
+
+    def test_permission_role_update_keeps_label_when_missing(self, test_role: dict[str, Any]):
+        result = call_action("permission_role_update", id=test_role["id"], description="Updated")
+
+        assert result["label"] == test_role["label"]
+
+    def test_permission_role_update_empty_label(self, test_role: dict[str, Any]):
+        with pytest.raises(tk.ValidationError) as e:
+            call_action("permission_role_update", id=test_role["id"], label="", description="Updated")
+
+        assert "label" in e.value.error_dict
 
     def test_permission_role_update_missing_id(self):
         with pytest.raises(tk.ValidationError) as e:
@@ -113,7 +130,7 @@ class TestPermissionRoleUpdate:
         with pytest.raises(tk.ValidationError) as e:
             call_action("permission_role_update", id="xxx")
 
-        assert e.value.error_dict["id"] == ["Role xxx doesn't exists"]
+        assert e.value.error_dict["id"] == ["Role xxx doesn't exist"]
 
     def test_permission_role_update_cant_update_label(self, test_role: dict[str, Any]):
         result = call_action(

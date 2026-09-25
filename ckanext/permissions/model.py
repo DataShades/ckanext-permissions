@@ -48,8 +48,11 @@ class Role(tk.BaseModel):
 
         return [role.dictize({}) for role in query]
 
-    def update(self, description: str) -> None:
+    def update(self, description: str, label: str | None = None) -> None:
         self.description = description
+
+        if label is not None:
+            self.label = label
 
         model.Session.commit()
 

@@ -130,11 +130,6 @@
   background-color: var(--bs-body-bg, #fff);
 }
 
-.perm-role-badge-default {
-  color: var(--bs-secondary-color, #6c757d);
-  border: 1px solid currentColor;
-}
-
 @keyframes perm-cascaded {
   from {
     background-color: rgba(255, 193, 7, 0.45);

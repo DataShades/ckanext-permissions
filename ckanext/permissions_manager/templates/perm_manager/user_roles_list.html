@@ -3,12 +3,12 @@
 {% import 'macros/form.html' as form %}
 
 {% block breadcrumb_label %}
-    {{ _("User roles list") }}
+    {{ _("User roles") }}
 {% endblock breadcrumb_label %}
 
 {% block primary_content_inner %}
     <p>{{ _("You can assign roles to users to control their access to the system.") }}</p>
-    <p>{{ h.render_markdown(_("Roles assigned there will be considered **global** roles.")) }}</p>
+    <p>{{ h.render_markdown(_("Roles assigned here will be considered **global** roles.")) }}</p>
 
     {% snippet 'perm_manager/user_roles_table.html', page=page, scope='global' %}
 {% endblock primary_content_inner %}

@@ -165,6 +165,21 @@ class TestUserRolesList:
 
         assert "Otto Outsider" in body
 
+    def test_no_match_shows_empty_state(self, app, sysadmin):
+        url = tk.h.url_for("perm_manager.user_roles_list", q="nobody-has-this-name")
+        body = app.get(url, headers={"Authorization": sysadmin["token"]}, status=200).body
+
+        assert "No users match your filters." in body
+        assert "Showing" not in body
+
+    def test_shows_result_count(self, app, sysadmin, user_factory):
+        user_factory(fullname="Counted User")
+
+        url = tk.h.url_for("perm_manager.user_roles_list", q="counted user")
+        body = app.get(url, headers={"Authorization": sysadmin["token"]}, status=200).body
+
+        assert "Showing 1–1 of 1" in body
+
     def test_role_badges_show_labels(self, app, sysadmin, user, test_role):
         utils.assign_role_to_user(user["id"], test_role["id"])
 
@@ -275,7 +290,24 @@ class TestForms:
 
         role = perm_model.Role.get(test_role["id"])
         assert role
-        assert role.description == "Updated"
+        assert str(role.description) == "Updated"
+
+    def test_add_role_form_validates_id_in_browser(self, app, sysadmin):
+        body = app.get(
+            tk.h.url_for("perm_manager.role_add"), headers={"Authorization": sysadmin["token"]}, status=200
+        ).body
+
+        assert f'pattern="{const.ROLE_ID_PATTERN}"' in body
+        assert f'maxlength="{const.ROLE_ID_MAX_LENGTH}"' in body
+
+    def test_edit_role_label(self, app, sysadmin, test_role):
+        url = tk.h.url_for("perm_manager.role_edit", role_id=test_role["id"])
+
+        self._post(app, sysadmin, url, {"label": "Renamed", "description": "Updated"})
+
+        role = perm_model.Role.get(test_role["id"])
+        assert role
+        assert str(role.label) == "Renamed"
 
     def test_delete_role(self, app, sysadmin, test_role):
         self._post(app, sysadmin, tk.h.url_for("perm_manager.role_delete"), {"id": test_role["id"]})
@@ -315,6 +347,12 @@ class TestForms:
 @pytest.mark.ckan_config("ckan.plugins", "permissions permissions_manager")
 @pytest.mark.usefixtures("with_plugins", "clean_db")
 class TestNavigation:
+    def test_styles_only_on_manager_pages(self, app, sysadmin):
+        headers = {"Authorization": sysadmin["token"]}
+
+        assert "permission-manager.css" not in app.get(tk.h.url_for("home.index"), headers=headers).body
+        assert "permission-manager.css" in app.get(tk.h.url_for("perm_manager.role_list"), headers=headers).body
+
     def test_header_has_single_permissions_link(self, app, sysadmin):
         body = app.get(tk.h.url_for("home.index"), headers={"Authorization": sysadmin["token"]}, status=200).body
 

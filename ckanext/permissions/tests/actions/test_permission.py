@@ -92,7 +92,7 @@ class TestPermissionsUpdate:
             )
 
     def test_role_id_not_exists(self):
-        with pytest.raises(tk.ValidationError, match="Role xxx doesn't exists"):
+        with pytest.raises(tk.ValidationError, match="Role xxx doesn't exist"):
             call_action("permissions_update", permissions={"perm_1": {"xxx": True}})
 
 

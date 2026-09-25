@@ -1,7 +1,7 @@
 {% extends 'perm_manager/base.html' %}
 
 {% block breadcrumb_label %}
-    {{ _("Roles manager") }}
+    {{ _("Roles") }}
 {% endblock breadcrumb_label %}
 
 {% block primary_content_inner %}
@@ -35,7 +35,10 @@
                             <td>
                                 {{ role.label }}
                                 {% if h.is_default_role(role.id) %}
-                                    <span class="badge bg-black" title="{{ _('Built-in role, it can\'t be deleted') }}">{{ _("System") }}</span>
+                                    <span class="text-muted ms-1" title="{{ _('Built-in role, it can\'t be deleted') }}">
+                                        <i class="fa fa-lock" aria-hidden="true"></i>
+                                        <span class="visually-hidden">{{ _("Built-in role, it can't be deleted") }}</span>
+                                    </span>
                                 {% endif %}
                                 <pre class="m-0">{{ role.id }}</pre>
                             </td>

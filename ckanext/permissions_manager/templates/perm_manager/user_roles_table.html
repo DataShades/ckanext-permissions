@@ -15,8 +15,8 @@
 
         <div class="col-md-6 col-lg-4">
             <label for="role" class="form-label">{{ _('Role') }}</label>
-            <select name="role" id="role" class="form-select">
-                <option value="">{{ _('All Roles') }}</option>
+            <select name="role" id="role" class="form-select" data-module="perm-auto-submit">
+                <option value="">{{ _('All roles') }}</option>
                 {% for role in h.permission_get_registered_roles_options() %}
                     <option value="{{ role.value }}" {% if request.args.get('role') == role.value %}selected{% endif %}>
                         {{ role.text }}
@@ -29,7 +29,7 @@
             <button type="submit" class="btn btn-primary w-100 d-block">
                 {{ _('Filter') }}
             </button>
-            <a href="{{ request.path }}" class="btn btn-danger w-100 d-block">
+            <a href="{{ request.path }}" class="btn btn-outline-secondary w-100 d-block">
                 {{ _('Clear') }}
             </a>
         </div>
@@ -37,7 +37,7 @@
         {% if scope == 'organization' %}
             <div class="col-12">
                 <div class="form-check">
-                    <input class="form-check-input" type="checkbox" name="all" value="1" id="all-users" {% if h.asbool(request.args.get('all')) %}checked{% endif %}>
+                    <input class="form-check-input" type="checkbox" name="all" value="1" id="all-users" data-module="perm-auto-submit" {% if h.asbool(request.args.get('all')) %}checked{% endif %}>
                     <label class="form-check-label" for="all-users">{{ _('Show all portal users') }}</label>
                 </div>
                 <div class="form-text">
@@ -47,57 +47,71 @@
         {% endif %}
     </div>
 
-    <p class="form-text">{{ _('Only active users with an email address are listed.') }}</p>
+    <div class="d-flex flex-wrap justify-content-between gap-2 mb-2">
+        <p class="form-text m-0">{{ _('Only active users are listed.') }}</p>
 
-    <table class="table">
-        <colgroup>
-            <col style="width: 40%">
-            <col style="width: 40%">
-            <col style="width: 20%">
-        </colgroup>
+        {% if page.item_count %}
+            <p class="form-text m-0" aria-live="polite">
+                {{ _('Showing {first}–{last} of {total}').format(first=page.first_item, last=page.last_item, total=page.item_count) }}
+            </p>
+        {% endif %}
+    </div>
 
-        <thead>
-            <tr>
-                <th>{{ _("User") }}</th>
-                <th>{{ _("Roles") }}</th>
-                <th>{{ _("Actions") }}</th>
-            </tr>
-        </thead>
+    <div class="table-responsive">
+        <table class="table">
+            <colgroup>
+                <col style="width: 40%">
+                <col style="width: 40%">
+                <col style="width: 20%">
+            </colgroup>
 
-        <tbody>
-            {% for user in page.items %}
+            <thead>
                 <tr>
-                    <td>
-                        <a href="{{ url_for('user.read', id=user.name) }}">
-                            {% snippet 'user/snippets/placeholder.html', size=20, user_name=user.display_name %}
-                            {{ user.display_name }}
-                        </a>
-                    </td>
-                    <td>
-                        {% for role in user.roles %}
-                            {% if h.is_default_role(role) %}
-                                <span class="badge bg-black">{{ role_labels.get(role, role) }}</span>
-                            {% else %}
-                                <span class="badge bg-success">{{ role_labels.get(role, role) }}</span>
-                            {% endif %}
-                        {% endfor %}
-                    </td>
-                    <td>
-                        {% if scope == 'global' %}
-                            {% set url = url_for('perm_manager.edit_user_role', user_id=user.id) %}
-                        {% else %}
-                            {% set url = url_for('perm_manager.organization_edit_user_role', org_id=group_dict.id, user_id=user.id) %}
-                        {% endif %}
-
-                        <a href="{{ url }}" class="btn btn-outline-primary">
-                            <i class="fas fa-edit"></i>
-                            {{ _("Edit") }}
-                        </a>
-                    </td>
+                    <th>{{ _("User") }}</th>
+                    <th>{{ _("Roles") }}</th>
+                    <th>{{ _("Actions") }}</th>
                 </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+            </thead>
+
+            <tbody>
+                {% for user in page.items %}
+                    <tr>
+                        <td>
+                            <a href="{{ url_for('user.read', id=user.name) }}">
+                                {% snippet 'user/snippets/placeholder.html', size=20, user_name=user.display_name %}
+                                {{ user.display_name }}
+                            </a>
+                        </td>
+                        <td>
+                            {% for role in user.roles %}
+                                {% if h.is_default_role(role) %}
+                                    <span class="badge bg-black">{{ role_labels.get(role, role) }}</span>
+                                {% else %}
+                                    <span class="badge bg-success">{{ role_labels.get(role, role) }}</span>
+                                {% endif %}
+                            {% endfor %}
+                        </td>
+                        <td>
+                            {% if scope == 'global' %}
+                                {% set url = url_for('perm_manager.edit_user_role', user_id=user.id) %}
+                            {% else %}
+                                {% set url = url_for('perm_manager.organization_edit_user_role', org_id=group_dict.id, user_id=user.id) %}
+                            {% endif %}
+
+                            <a href="{{ url }}" class="btn btn-outline-primary">
+                                <i class="fas fa-edit"></i>
+                                {{ _("Edit") }}
+                            </a>
+                        </td>
+                    </tr>
+                {% else %}
+                    <tr>
+                        <td colspan="3" class="text-center text-muted">{{ _('No users match your filters.') }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
 
     {{ page.pager(role=request.args.role, q=request.args.q, all=request.args.all) }}
 

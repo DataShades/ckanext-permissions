@@ -25,7 +25,7 @@ def role_doesnt_exists(role: str) -> str:
         role name
     """
     if perm_model.Role.get(role) is not None:
-        raise tk.Invalid(f"Role {role} is already exists")
+        raise tk.Invalid(tk._("Role {role} already exists").format(role=role))
 
     return role
 
@@ -43,7 +43,7 @@ def permission_role_exists(role: str) -> str:
         role name
     """
     if perm_model.Role.get(role) is None:
-        raise tk.Invalid(f"Role {role} doesn't exists")
+        raise tk.Invalid(tk._("Role {role} doesn't exist").format(role=role))
 
     return role
 
@@ -84,16 +84,18 @@ def role_id_validator(value: str) -> str:
     Returns:
         role ID
     """
-    name_match = re.compile(r"[a-z_\-]*$")
-
     if len(value) < perm_const.ROLE_ID_MIN_LENGTH:
-        raise tk.Invalid(f"Role ID must be at least {perm_const.ROLE_ID_MIN_LENGTH} characters long.")
+        raise tk.Invalid(
+            tk._("Role ID must be at least {min} characters long.").format(min=perm_const.ROLE_ID_MIN_LENGTH)
+        )
 
     if len(value) > perm_const.ROLE_ID_MAX_LENGTH:
-        raise tk.Invalid(f"Role ID must be a maximum of {perm_const.ROLE_ID_MAX_LENGTH} characters long.")
+        raise tk.Invalid(
+            tk._("Role ID must be at most {max} characters long.").format(max=perm_const.ROLE_ID_MAX_LENGTH)
+        )
 
-    if not name_match.match(value):
-        raise tk.Invalid("Role ID must be purely lowercase alpha(ascii) characters and these symbols: -_")
+    if not re.fullmatch(perm_const.ROLE_ID_PATTERN, value):
+        raise tk.Invalid(tk._('Role ID can only contain lowercase letters (a-z), "-" and "_".'))
 
     return value
 
@@ -111,7 +113,7 @@ def not_default_role(role_id: str) -> str:
         role ID
     """
     if role_id in [role.value for role in perm_const.Roles]:
-        raise tk.Invalid(f"Role {role_id} is a default role.")
+        raise tk.Invalid(tk._("Role {role} is a default role.").format(role=role_id))
 
     return role_id
 

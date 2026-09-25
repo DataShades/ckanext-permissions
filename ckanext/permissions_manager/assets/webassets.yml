@@ -15,6 +15,7 @@ js:
   - js/perm-permission-dependencies.js
   - js/perm-permission-matrix.js
   - js/perm-confirm-role-removal.js
+  - js/perm-auto-submit.js
   extra:
     preload:
     - base/main

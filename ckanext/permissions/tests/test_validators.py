@@ -21,7 +21,7 @@ class TestRoleDoesntExists:
         with pytest.raises(tk.Invalid) as e:
             perm_validators.role_doesnt_exists(test_role["id"])
 
-        assert e.value.error == f"Role {test_role['id']} is already exists"
+        assert e.value.error == f"Role {test_role['id']} already exists"
 
 
 @pytest.mark.usefixtures("with_plugins", "clean_db")
@@ -36,7 +36,7 @@ class TestRoleExists:
         with pytest.raises(tk.Invalid) as e:
             perm_validators.permission_role_exists(role_name)
 
-        assert e.value.error == f"Role {role_name} doesn't exists"
+        assert e.value.error == f"Role {role_name} doesn't exist"
 
 
 @pytest.mark.usefixtures("with_plugins", "clean_db")
@@ -57,7 +57,7 @@ class TestRolesExists:
         with pytest.raises(tk.Invalid) as e:
             perm_validators.roles_exists(role_names)
 
-        assert e.value.error == f"Role {role_names[1]} doesn't exists"
+        assert e.value.error == f"Role {role_names[1]} doesn't exist"
 
 
 class TestRoleIdValidator:

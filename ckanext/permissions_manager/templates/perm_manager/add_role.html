@@ -11,9 +11,17 @@
         {{ h.csrf_input() }}
 
         {% set attrs = {"required": 1, "class": "form-control"} %}
+        {% set id_rules = h.permission_role_id_rules() %}
+        {% set id_hint = _('Lowercase letters, "-" and "_" only, up to {max} characters.').format(max=id_rules.max_length) %}
+        {% set id_attrs = dict(attrs, pattern=id_rules.pattern, minlength=id_rules.min_length, maxlength=id_rules.max_length, title=id_hint, **{"aria-describedby": "id-help"}) %}
 
-        {{ form.input('id', label=_('ID'), placeholder=_('e.g creator'), value=data.id, error=errors.id, classes=[], attrs=attrs, is_required=True) }}
-        {{ form.input('label', label=_('Label'), placeholder=_('e.g Creator'), value=data.label, error=errors.label, classes=[], attrs=attrs, is_required=True) }}
+        {% call form.input('id', label=_('ID'), placeholder=_('e.g. creator'), value=data.id, error=errors.id, classes=[], attrs=id_attrs, is_required=True) %}
+            <div id="id-help" class="form-text">
+                {{ id_hint }} {{ _("It can't be changed later.") }}
+            </div>
+        {% endcall %}
+
+        {{ form.input('label', label=_('Label'), placeholder=_('e.g. Creator'), value=data.label, error=errors.label, classes=[], attrs=attrs, is_required=True) }}
         {{ form.textarea('description', label=_('Description'), value=data.description, error=errors.description, attrs=attrs, is_required=True) }}
 
         <div class="form-actions">

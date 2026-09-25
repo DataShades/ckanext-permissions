@@ -43,12 +43,14 @@ def permission_role_update(context: Context, data_dict: DataDict) -> perm_types.
 
     role = cast(perm_model.Role, perm_model.Role.get(data_dict["id"]))
 
-    old_description = role.description
-    role.update(data_dict["description"])
+    old_label, old_description = role.label, role.description
+    role.update(data_dict["description"], data_dict.get("label"))
 
     log.info(
-        "Role updated: role=%s description=%r -> %r actor=%s",
+        "Role updated: role=%s label=%r -> %r description=%r -> %r actor=%s",
         role.id,
+        old_label,
+        role.label,
         old_description,
         role.description,
         context.get("user"),
@@ -137,7 +139,9 @@ def _check_blocked_roles(permissions: dict[str, dict[str, bool]]) -> dict[str, l
     for permission_key, roles_data in permissions.items():
         for role_id, granted in roles_data.items():
             if granted and perm_utils.is_permission_blocked_for_role(permission_key, role_id):
-                errors.setdefault(permission_key, []).append(f"Permission can't be given to the {role_id} role")
+                errors.setdefault(permission_key, []).append(
+                    tk._("Permission can't be given to the {role} role").format(role=role_id)
+                )
 
     return errors
 
@@ -154,7 +158,11 @@ def _check_dependencies(updated_permissions: dict[str, dict[str, bool]]) -> dict
                     if not perm_model.RolePermission.get(role_id, dependency)
                 ]
                 if missing:
-                    errors.setdefault(permission_key, []).append(f"Role {role_id} also needs: {', '.join(missing)}")
+                    errors.setdefault(permission_key, []).append(
+                        tk._("Role {role} also needs: {permissions}").format(
+                            role=role_id, permissions=", ".join(missing)
+                        )
+                    )
             else:
                 dependents = [
                     dependent
@@ -163,7 +171,9 @@ def _check_dependencies(updated_permissions: dict[str, dict[str, bool]]) -> dict
                 ]
                 if dependents:
                     errors.setdefault(permission_key, []).append(
-                        f"Role {role_id} still has permissions that depend on it: {', '.join(dependents)}"
+                        tk._("Role {role} still has permissions that depend on it: {permissions}").format(
+                            role=role_id, permissions=", ".join(dependents)
+                        )
                     )
 
     return errors
@@ -172,14 +182,14 @@ def _check_dependencies(updated_permissions: dict[str, dict[str, bool]]) -> dict
 def _validate_permission_data(data: DataDict) -> None:
     for permission_key, roles_data in data["permissions"].items():
         if not isinstance(permission_key, str):
-            raise tk.ValidationError("Invalid permission key")
+            raise tk.ValidationError(tk._("Invalid permission key"))
 
         if not isinstance(roles_data, dict):
-            raise tk.ValidationError("Invalid permission mapping")
+            raise tk.ValidationError(tk._("Invalid permission mapping"))
 
         for role_id, flag in roles_data.items():
             if not isinstance(flag, bool):
-                raise tk.ValidationError("Invalid permission value")
+                raise tk.ValidationError(tk._("Invalid permission value"))
 
             data, errors = tk.navl_validate(
                 {"id": role_id},

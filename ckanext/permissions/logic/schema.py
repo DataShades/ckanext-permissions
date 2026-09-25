@@ -37,9 +37,11 @@ def role_update(
     not_empty: types.Validator,
     unicode_safe: types.Validator,
     permission_role_exists: types.Validator,
+    ignore_missing: types.Validator,
 ) -> types.Schema:
     return {
         "id": [not_empty, unicode_safe, permission_role_exists],
+        "label": [ignore_missing, not_empty, unicode_safe],
         "description": [not_empty, unicode_safe],
     }
 

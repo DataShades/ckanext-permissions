@@ -51,6 +51,12 @@
     </div>
 {% endblock %}
 
+{%- block styles -%}
+    {{ super() }}
+
+    {% asset 'permissions_manager/css' %}
+{% endblock %}
+
 {%- block scripts -%}
     {% asset 'permissions_manager/js' %}
 

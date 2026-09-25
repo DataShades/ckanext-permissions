@@ -15,12 +15,12 @@
         {{ h.csrf_input() }}
 
         <p class="form-label"><b>{{ _('ID') }}</b></p>
-        <p>{{ role.id }}</p>
+        <p><code>{{ role.id }}</code></p>
 
-        <p class="form-label"><b>{{ _('Label') }}</b></p>
-        <p>{{ role.label }}</p>
+        {% set attrs = {"required": 1, "class": "form-control"} %}
 
-        {{ form.textarea('description', label=_('Description'), value=role.description, error=errors.description, attrs={"required": 1, "class": "form-control"}, is_required=True) }}
+        {{ form.input('label', label=_('Label'), value=data.label if 'label' in data else role.label, error=errors.label, classes=[], attrs=attrs, is_required=True) }}
+        {{ form.textarea('description', label=_('Description'), value=data.description if 'description' in data else role.description, error=errors.description, attrs=attrs, is_required=True) }}
 
         <div class="form-actions">
             <a href="{{ h.url_for('perm_manager.role_list') }}" class="btn btn-outline-primary">{{ _("Cancel") }}</a>

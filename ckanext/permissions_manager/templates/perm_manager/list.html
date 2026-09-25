@@ -3,7 +3,7 @@
 {% import 'macros/form.html' as form %}
 
 {% block breadcrumb_label %}
-    {{ _("Permissions manager") }}
+    {{ _("Permissions") }}
 {% endblock breadcrumb_label %}
 
 {% block primary_content_inner %}
@@ -22,7 +22,7 @@
             {% endcall %}
         </div>
         <div>
-            <button type="button" id="clear-search" class="btn btn-danger" disabled>
+            <button type="button" id="clear-search" class="btn btn-outline-secondary" disabled>
                 {{ _('Clear') }}
             </button>
         </div>
