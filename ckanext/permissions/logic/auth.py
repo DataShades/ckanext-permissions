@@ -6,6 +6,23 @@ from ckan import model, types
 import ckanext.permissions.utils as perm_utils
 
 
+def _get_user(context: types.Context) -> model.User | model.AnonymousUser:
+    return model.User.get(context.get("user")) or model.AnonymousUser()
+
+
+def _get_package(data_dict: types.DataDict | None) -> model.Package | None:
+    package_id = (data_dict or {}).get("id")
+
+    return model.Package.get(package_id) if package_id else None
+
+
+def _get_resource_package(data_dict: types.DataDict | None) -> model.Package | None:
+    resource_id = (data_dict or {}).get("id")
+    resource = model.Resource.get(resource_id) if resource_id else None
+
+    return model.Package.get(resource.package_id) if resource else None
+
+
 @tk.chained_auth_function
 @tk.auth_allow_anonymous_access
 def package_show(
@@ -13,7 +30,7 @@ def package_show(
     context: types.Context,
     data_dict: types.DataDict | None,
 ) -> types.AuthResult:
-    user = model.User.get(context.get("user")) or model.AnonymousUser()
+    user = _get_user(context)
     package = context.get("package")  # type: ignore
 
     if not package:
@@ -29,7 +46,7 @@ def package_show(
         if condition is not None and not condition():
             continue
 
-        if perm_utils.check_permission(permission, user):
+        if perm_utils.check_package_permission(permission, user, package):
             return {"success": True}
 
     return next_(context, data_dict or {})
@@ -40,9 +57,7 @@ def package_show(
 def package_update(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
-    user = model.User.get(context.get("user")) or model.AnonymousUser()
-
-    if perm_utils.check_permission("update_any_dataset", user):
+    if perm_utils.check_package_permission("update_any_dataset", _get_user(context), _get_package(data_dict)):
         return {"success": True}
 
     return next_(context, data_dict or {})
@@ -53,9 +68,7 @@ def package_update(
 def package_delete(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
-    user = model.User.get(context.get("user")) or model.AnonymousUser()
-
-    if perm_utils.check_permission("delete_any_dataset", user):
+    if perm_utils.check_package_permission("delete_any_dataset", _get_user(context), _get_package(data_dict)):
         return {"success": True}
 
     return next_(context, data_dict or {})
@@ -66,9 +79,7 @@ def package_delete(
 def resource_delete(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
-    user = model.User.get(context.get("user")) or model.AnonymousUser()
-
-    if perm_utils.check_permission("delete_any_resource", user):
+    if perm_utils.check_package_permission("delete_any_resource", _get_user(context), _get_resource_package(data_dict)):
         return {"success": True}
 
     return next_(context, data_dict or {})

@@ -120,7 +120,10 @@ def check_permission(
         bool: True if user has the permission, False otherwise
     """
     if isinstance(user, model.AnonymousUser):
-        return perm_model.RolePermission.get(perm_const.Roles.Anonymous.value, permission) is not None
+        return (
+            scope == perm_const.SCOPE_GLOBAL
+            and perm_model.RolePermission.get(perm_const.Roles.Anonymous.value, permission) is not None
+        )
 
     for role in user.roles:  # type: ignore
         if role.scope != scope or role.scope_id != scope_id:
@@ -130,6 +133,57 @@ def check_permission(
             return True
 
     return False
+
+
+def check_package_permission(
+    permission: str,
+    user: model.User | model.AnonymousUser,
+    package: model.Package | None,
+) -> bool:
+    """Check if user has the given permission globally or in the package's organization.
+
+    Args:
+        permission: The permission key to check
+        user: The user to check permissions for
+        package: The package the permission applies to
+
+    Returns:
+        bool: True if user has the permission, False otherwise
+    """
+    if check_permission(permission, user):
+        return True
+
+    if not package or not package.owner_org:
+        return False
+
+    return check_permission(permission, user, perm_const.SCOPE_ORGANIZATION, package.owner_org)
+
+
+def get_permission_scope_ids(
+    permissions: list[str],
+    user: model.User | model.AnonymousUser,
+    scope: str,
+) -> set[str]:
+    """Get IDs of the scopes where user has any of the given permissions.
+
+    Args:
+        permissions: The permission keys to check
+        user: The user to check permissions for
+        scope: The scope of the roles, e.g. organization
+
+    Returns:
+        set[str]: The scope IDs, e.g. organization IDs
+    """
+    if isinstance(user, model.AnonymousUser):
+        return set()
+
+    return {
+        str(role.scope_id)
+        for role in user.roles  # type: ignore
+        if role.scope == scope
+        and role.scope_id
+        and any(perm_model.RolePermission.get(str(role.role_id), permission) for permission in permissions)
+    }
 
 
 def assign_role_to_user(user_id: str, role_id: str, scope: str = perm_const.SCOPE_GLOBAL, scope_id: str | None = None):
