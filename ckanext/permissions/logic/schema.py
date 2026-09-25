@@ -70,10 +70,12 @@ def permission_schema(
     unicode_safe: types.Validator,
     ignore_missing: types.Validator,
     list_of_strings: types.Validator,
+    boolean_validator: types.Validator,
 ) -> types.Schema:
     return {
         "key": [not_empty, unicode_safe],
         "label": [not_empty, unicode_safe],
         "description": [ignore_missing, unicode_safe],
         "depends_on": [ignore_missing, list_of_strings],
+        "anonymous": [ignore_missing, boolean_validator],
     }

@@ -1,6 +1,6 @@
 from ckan.lib import munge
 
-from ckanext.permissions import const
+from ckanext.permissions import const, utils
 from ckanext.permissions.utils import get_registered_roles
 
 
@@ -22,3 +22,7 @@ def permission_get_registered_roles_options() -> list[dict[str, str]]:
         for role_id, role_label in get_registered_roles().items()
         if role_id != const.Roles.Anonymous.value
     ]
+
+
+def is_permission_blocked_for_role(permission: str, role_id: str) -> bool:
+    return utils.is_permission_blocked_for_role(permission, role_id)

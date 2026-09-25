@@ -67,6 +67,10 @@ def permissions_update(context: Context, data_dict: DataDict) -> DataDict:
     tk.check_access("manage_permissions", context, data_dict)
 
     _validate_permission_data(data_dict)
+
+    if errors := _check_blocked_roles(data_dict["permissions"]):
+        raise tk.ValidationError(errors)
+
     registered_permissions = perm_utils.get_permissions()
 
     updated_permissions = {}
@@ -77,25 +81,7 @@ def permissions_update(context: Context, data_dict: DataDict) -> DataDict:
             missing_permissions.append(permission_key)
             continue
 
-        permission_data = {}
-
-        for role_id, flag in roles_data.items():
-            role_permission = perm_model.RolePermission.get(role_id, permission_key)
-
-            if flag and role_permission:
-                continue
-
-            if not flag and not role_permission:
-                continue
-
-            if not flag and role_permission:
-                role_permission.delete(commit=False)
-            else:
-                perm_model.RolePermission.create(role_id, permission_key, commit=False)
-
-            permission_data[role_id] = flag
-
-        updated_permissions[permission_key] = permission_data
+        updated_permissions[permission_key] = _update_role_permissions(permission_key, roles_data)
 
     model.Session.flush()
 
@@ -119,6 +105,41 @@ def permissions_update(context: Context, data_dict: DataDict) -> DataDict:
         "updated_permissions": updated_permissions,
         "missing_permissions": missing_permissions,
     }
+
+
+def _update_role_permissions(permission_key: str, roles_data: dict[str, bool]) -> dict[str, bool]:
+    """Grant or revoke the permission for each role, without committing.
+
+    Returns:
+        The roles whose permission changed, mapped to the new value
+    """
+    changed = {}
+
+    for role_id, flag in roles_data.items():
+        role_permission = perm_model.RolePermission.get(role_id, permission_key)
+
+        if bool(role_permission) == flag:
+            continue
+
+        if role_permission:
+            role_permission.delete(commit=False)
+        else:
+            perm_model.RolePermission.create(role_id, permission_key, commit=False)
+
+        changed[role_id] = flag
+
+    return changed
+
+
+def _check_blocked_roles(permissions: dict[str, dict[str, bool]]) -> dict[str, list[str]]:
+    errors: dict[str, list[str]] = {}
+
+    for permission_key, roles_data in permissions.items():
+        for role_id, granted in roles_data.items():
+            if granted and perm_utils.is_permission_blocked_for_role(permission_key, role_id):
+                errors.setdefault(permission_key, []).append(f"Permission can't be given to the {role_id} role")
+
+    return errors
 
 
 def _check_dependencies(updated_permissions: dict[str, dict[str, bool]]) -> dict[str, list[str]]:

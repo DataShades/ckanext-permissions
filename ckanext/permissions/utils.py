@@ -64,6 +64,7 @@ def _load_schema(path: str):
 
 def validate_groups(groups: dict[str, perm_types.PermissionGroup]) -> bool:
     dependencies: dict[str, list[str]] = {}
+    anonymous: dict[str, bool] = {}
 
     for group in groups.values():
         data, errors = tk.navl_validate(cast(dict, group), perm_schema.permission_group_schema())
@@ -82,8 +83,10 @@ def validate_groups(groups: dict[str, perm_types.PermissionGroup]) -> bool:
                 raise tk.ValidationError(f"Permission {permission['key']} is duplicated")
 
             dependencies[permission["key"]] = permission.get("depends_on", [])
+            anonymous[permission["key"]] = permission.get("anonymous", True)
 
     _validate_dependencies(dependencies)
+    _validate_anonymous(dependencies, anonymous)
 
     return True
 
@@ -96,6 +99,36 @@ def _validate_dependencies(dependencies: dict[str, list[str]]) -> None:
 
             if dependency not in dependencies:
                 raise tk.ValidationError(f"Permission {key} depends on unknown permission {dependency}")
+
+
+def _validate_anonymous(dependencies: dict[str, list[str]], anonymous: dict[str, bool]) -> None:
+    for key, depends_on in dependencies.items():
+        if not anonymous[key]:
+            continue
+
+        for dependency in depends_on:
+            if not anonymous[dependency]:
+                raise tk.ValidationError(
+                    f"Permission {key} is allowed for the anonymous role but depends on {dependency}, which is not"
+                )
+
+
+def is_permission_blocked_for_role(permission: str, role_id: str) -> bool:
+    """Check if the permission definition forbids giving the permission to the role.
+
+    Args:
+        permission: The permission key
+        role_id: The role ID
+
+    Returns:
+        bool: True for the anonymous role when the definition sets `anonymous: false`
+    """
+    if role_id != perm_const.Roles.Anonymous.value:
+        return False
+
+    definition = get_permissions().get(permission)
+
+    return bool(definition) and not tk.asbool(definition.get("anonymous", True))
 
 
 def get_permission_dependencies(permission: str) -> list[str]:
@@ -160,6 +193,7 @@ def check_permission(
     if isinstance(user, model.AnonymousUser):
         return (
             scope == perm_const.SCOPE_GLOBAL
+            and not is_permission_blocked_for_role(permission, perm_const.Roles.Anonymous.value)
             and perm_model.RolePermission.get(perm_const.Roles.Anonymous.value, permission) is not None
         )
 

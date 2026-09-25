@@ -388,3 +388,44 @@ class TestRemoveRoleFromUser:
 
         assert admin not in [role.role_id for role in perm_model.UserRole.get(user["id"])]
         assert [role.role_id for role in org_roles] == [admin]
+
+
+@pytest.mark.usefixtures("with_plugins")
+class TestAnonymousValidation:
+    def test_allowed_permission_depends_on_blocked_one(self):
+        with pytest.raises(tk.ValidationError, match="allowed for the anonymous role but depends on read"):
+            validate_groups(
+                {
+                    "new_group": PermissionGroup(
+                        name="xxx",
+                        description="xxx",
+                        permissions=[
+                            PermissionDefinition(key="read", label="Read", anonymous=False),
+                            PermissionDefinition(key="write", label="Write", depends_on=["read"]),
+                        ],
+                    )
+                }
+            )
+
+    def test_blocked_permission_depends_on_allowed_one(self):
+        validate_groups(
+            {
+                "new_group": PermissionGroup(
+                    name="xxx",
+                    description="xxx",
+                    permissions=[
+                        PermissionDefinition(key="read", label="Read"),
+                        PermissionDefinition(key="write", label="Write", depends_on=["read"], anonymous=False),
+                    ],
+                )
+            }
+        )
+
+    def test_is_permission_blocked_for_role(self):
+        anonymous = const.Roles.Anonymous.value
+
+        assert utils.is_permission_blocked_for_role("update_any_dataset", anonymous)
+        assert not utils.is_permission_blocked_for_role("read_private_dataset", anonymous)
+        assert not utils.is_permission_blocked_for_role("perm_1", anonymous)
+        assert not utils.is_permission_blocked_for_role("missing", anonymous)
+        assert not utils.is_permission_blocked_for_role("update_any_dataset", const.Roles.Authenticated.value)

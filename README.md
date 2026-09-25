@@ -46,8 +46,8 @@ A permission granted through a global role applies to every dataset. Through a r
 
 To stop users from raising their own access, `manage_dataset_collaborators` can't add the user themselves as a collaborator, and `manage_organization_members` can't change the user's own membership, grant the `admin` role, or change or remove an existing admin.
 
-> [!CAUTION]
-> Permissions given to the `anonymous` role apply to everyone, including visitors who are not logged in. Giving it `update_any_dataset`, `delete_any_dataset` or `delete_any_resource` lets anyone edit or delete every dataset, and `create_dataset` lets anyone create datasets. The other permissions have no effect on the `anonymous` role, because CKAN requires a logged-in user for those actions.
+> [!NOTE]
+> Permissions given to the `anonymous` role apply to everyone, including visitors who are not logged in. Only `read_any_dataset` and `read_private_dataset` can be given to it; the others are disabled in its column on the permissions page.
 
 
 ## Requirements
@@ -131,6 +131,7 @@ permissions:
   - key: approve_dataset
     label: Approve dataset
     description: User can approve datasets  # optional
+    anonymous: false  # optional, default: true
     depends_on:  # optional
       - review_dataset
 ```
@@ -138,6 +139,8 @@ permissions:
 `name`, `description` and at least one permission are required, and every permission needs a `key` and a `label`. Keys must be unique across all loaded groups. Invalid groups stop CKAN from starting.
 
 `depends_on` lists permissions a role must have before it can be given this one; they can come from any loaded group. Saving the permissions page fails if a role would end up with a permission but not its dependencies, including when a dependency is removed while the permission is kept. On the page, ticking a permission also ticks its dependencies for that role, and unticking a dependency unticks the permissions that need it. The rule applies when permissions are saved, so grants made before a dependency was added keep working until they're edited.
+
+Set `anonymous: false` on permissions that must never reach visitors who aren't logged in, such as anything that changes data. Saving the permissions page fails if such a permission is given to the `anonymous` role, and a grant that already exists is ignored. A permission allowed for the `anonymous` role can't depend on one that isn't.
 
 Use `depends_on` only when a permission can't work without another one, not to express that one permission is broader than another. List direct requirements only; they're followed in a chain, so `delete_any_resource` requires `update_any_dataset`, which in turn requires `read_any_dataset`.
 

@@ -74,11 +74,11 @@
 
                                 {% for role_id in registered_roles %}
                                     {% set key = h.permission_munge_string(permission.key) %}
-
+                                    {% set blocked = h.is_permission_blocked_for_role(permission.key, role_id) %}
                                     <td>
-                                        <div class="checkbox-wrapper">
+                                        <div class="checkbox-wrapper" {% if blocked %}title="{{ _('Can\'t be given to this role') }}"{% endif %}>
                                             <input type='hidden' value='unset' name='{{ permission.key }}|{{ role_id }}'>
-                                            <input type="checkbox" id="{{ role_id }}-{{ key }}" name="{{ permission.key }}|{{ role_id }}" value="set" data-permission="{{ permission.key }}" data-role="{{ role_id }}" data-depends-on="{{ (permission.depends_on or []) | join(' ') }}" {{ 'checked' if h.get_role_permissions(role_id, permission.key) }}/>
+                                            <input type="checkbox" id="{{ role_id }}-{{ key }}" name="{{ permission.key }}|{{ role_id }}" value="set" data-permission="{{ permission.key }}" data-role="{{ role_id }}" data-depends-on="{{ (permission.depends_on or []) | join(' ') }}" {{ 'disabled' if blocked else 'checked' if h.get_role_permissions(role_id, permission.key) }}/>
                                             <label for="{{ role_id }}-{{ key }}" class="toggle">
                                                 <span></span>
                                             </label>

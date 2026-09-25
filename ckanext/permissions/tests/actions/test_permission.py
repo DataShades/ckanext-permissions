@@ -7,6 +7,7 @@ from ckan import model
 from ckan.tests.helpers import call_action
 
 from ckanext.permissions import model as perm_model
+from ckanext.permissions import utils
 
 
 @pytest.mark.usefixtures("with_plugins", "clean_db")
@@ -156,3 +157,31 @@ class TestPermissionDependencies:
 
         with pytest.raises(tk.ValidationError, match="Role authenticated also needs"):
             call_action("permissions_update", permissions={"update_any_dataset": {"authenticated": True}})
+
+
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestAnonymousRestriction:
+    def test_grant_to_anonymous_is_rejected(self):
+        with pytest.raises(tk.ValidationError, match="can't be given to the anonymous role"):
+            call_action(
+                "permissions_update",
+                permissions={
+                    "read_any_dataset": {"anonymous": True},
+                    "update_any_dataset": {"anonymous": True},
+                },
+            )
+
+        assert not perm_model.RolePermission.get("anonymous", "read_any_dataset")
+        assert not perm_model.RolePermission.get("anonymous", "update_any_dataset")
+
+    def test_revoke_from_anonymous_is_allowed(self):
+        perm_model.RolePermission.create("anonymous", "update_any_dataset")
+
+        call_action("permissions_update", permissions={"update_any_dataset": {"anonymous": False}})
+
+        assert not perm_model.RolePermission.get("anonymous", "update_any_dataset")
+
+    def test_existing_grant_is_ignored(self):
+        perm_model.RolePermission.create("anonymous", "update_any_dataset")
+
+        assert not utils.check_permission("update_any_dataset", model.AnonymousUser())
