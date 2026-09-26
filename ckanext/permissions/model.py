@@ -3,7 +3,7 @@ from __future__ import annotations
 import logging
 
 from sqlalchemy import Column, ForeignKey, String, case, func
-from sqlalchemy.orm import Query, backref, relationship
+from sqlalchemy.orm import Mapped, Query, backref, relationship
 from typing_extensions import Self
 
 from ckan import model, types
@@ -18,9 +18,10 @@ log = logging.getLogger(__name__)
 class Role(tk.BaseModel):
     __tablename__ = "perm_role"
 
-    id = Column(String, primary_key=True)
-    label = Column(String, nullable=False)
-    description = Column(String, nullable=False)
+    # `Column` instead of `mapped_column` keeps SQLAlchemy 1.4 support
+    id: Mapped[str] = Column(String, primary_key=True)  # pyright: ignore[reportAssignmentType]
+    label: Mapped[str] = Column(String, nullable=False)  # pyright: ignore[reportAssignmentType]
+    description: Mapped[str] = Column(String, nullable=False)  # pyright: ignore[reportAssignmentType]
 
     @classmethod
     def create(cls, id: str, label: str, description: str, commit: bool = True) -> Self:

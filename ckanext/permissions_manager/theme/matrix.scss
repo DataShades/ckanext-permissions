@@ -4,61 +4,56 @@ $cell-bg: var(--bs-body-bg, #fff);
     max-height: 70vh;
     overflow: auto;
 
-    .table {
+    #permissions-table {
         margin-bottom: 0;
-    }
 
-    thead th {
-        position: sticky;
-        top: 0;
-        z-index: 2;
-        background-color: $cell-bg;
-    }
+        thead {
+            border-bottom: inherit;
 
-    th.perm-matrix-name,
-    tbody td:first-child {
-        position: sticky;
-        left: 0;
-        z-index: 1;
-        min-width: 18rem;
-        background-color: $cell-bg;
-    }
+            th {
+                position: sticky;
+                top: 0;
+                z-index: 2;
+                background-color: $cell-bg;
+            }
+        }
 
-    thead th.perm-matrix-name {
-        z-index: 3;
-    }
+        th.perm-matrix-name,
+        tbody td:first-child {
+            position: sticky;
+            left: 0;
+            z-index: 1;
+            min-width: 18rem;
+            background-color: $cell-bg;
+        }
 
-    th.perm-matrix-role {
-        min-width: 8rem;
-    }
+        thead th.perm-matrix-name {
+            z-index: 3;
+        }
 
-    td.perm-changed {
-        background-color: color-mix(in srgb, var(--perm-toggle-on) 8%, transparent);
-    }
+        th.perm-matrix-role {
+            min-width: 8rem;
+        }
 
-    td.perm-error {
-        background-color: color-mix(in srgb, var(--perm-error) 12%, transparent);
-        box-shadow: inset 0 0 0 2px var(--perm-error);
-    }
+        td.perm-changed {
+            background-color: color-mix(in srgb, var(--perm-toggle-on) 8%, transparent);
+        }
 
-    td.perm-cascaded {
-        animation: perm-cascaded 2s ease-out;
+        td.perm-error {
+            background-color: color-mix(in srgb, var(--perm-error) 12%, transparent);
+            box-shadow: inset 0 0 0 2px var(--perm-error);
+        }
+
+        td.perm-cascaded {
+            animation: perm-cascaded 2s ease-out;
+        }
+
     }
 }
 
 .perm-blocked {
     font-size: 0.875rem;
     white-space: nowrap;
-}
-
-.perm-matrix-actions {
-    position: sticky;
-    bottom: 0;
-    z-index: 3;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 0;
 }
 
 @keyframes perm-cascaded {

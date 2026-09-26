@@ -5,78 +5,17 @@
 {% endblock breadcrumb_label %}
 
 {% block primary_content_inner %}
-    {% set registered_roles = h.get_registered_roles() %}
-
-    <div class="mb-3">
-        <a href="{{ url_for('perm_manager.role_add') }}" class="btn btn-success">
-            {{ _("Add a new role") }}
-        </a>
-    </div>
-
-    <div class="table-responsive">
-        <table class="table" style="table-layout: fixed;">
-            <colgroup>
-                <col style="width: 15%">
-                <col style="width: 70%">
-                <col style="width: 15%">
-            </colgroup>
-
-            <thead>
-                <tr>
-                    <th>{{ _("Label") }}</th>
-                    <th>{{ _("Description") }}</th>
-                    <th class="d-flex justify-content-end">{{ _("Actions") }}</th>
-                </tr>
-            </thead>
-
-            <tbody>
-                {% for role in roles %}
-                        <tr>
-                            <td>
-                                {{ role.label }}
-                                {% if h.is_default_role(role.id) %}
-                                    <span class="text-muted ms-1" title="{{ _('Built-in role, it can\'t be deleted') }}">
-                                        <i class="fa fa-lock" aria-hidden="true"></i>
-                                        <span class="visually-hidden">{{ _("Built-in role, it can't be deleted") }}</span>
-                                    </span>
-                                {% endif %}
-                                <pre class="m-0">{{ role.id }}</pre>
-                            </td>
-                            <td>
-                                <i>{{ role.description }}</i>
-                            </td>
-                            <td>
-                                <div class="d-flex gap-3 justify-content-end">
-                                    {% if not h.is_default_role(role.id) %}
-                                        <form action="{{ h.url_for('perm_manager.role_delete') }}" method="POST">
-                                            {{ h.csrf_input() }}
-                                            <input type="hidden" name="id" value="{{ role.id }}">
-
-                                            {% set users = ungettext('{count} user', '{count} users', user_counts.get(role.id, 0)).format(count=user_counts.get(role.id, 0)) %}
-                                            {% set grants = ungettext('{count} permission', '{count} permissions', permission_counts.get(role.id, 0)).format(count=permission_counts.get(role.id, 0)) %}
-
-                                            <button
-                                                type="submit"
-                                                class="btn btn-danger"
-                                                aria-label="{{ _('Delete role') }}"
-                                                title="{{ _('Delete role') }}"
-                                                data-module="confirm-action"
-                                                data-module-with-data="true"
-                                                data-module-content="{{ _('Delete the role \"{label}\"? It is assigned to {users} and grants {permissions}. Those assignments and grants are removed too, and this can\'t be undone.').format(label=role.label, users=users, permissions=grants) }}"
-                                                >
-                                                <i class="fas fa-trash" aria-hidden="true"></i>
-                                            </button>
-                                        </form>
-                                    {% endif %}
-
-                                    <a href="{{ url_for('perm_manager.role_edit', role_id=role.id) }}" class="btn btn-primary" aria-label="{{ _('Edit role') }}" title="{{ _('Edit role') }}">
-                                        <i class="fas fa-edit" aria-hidden="true"></i>
-                                    </a>
-                                </div>
-                            </td>
-                        </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+    {% snippet "tables/render_table.html", table=table %}
 {% endblock primary_content_inner %}
+
+{%- block styles -%}
+    {{ super() }}
+
+    {% asset "tables/tables-css" %}
+{% endblock %}
+
+{%- block scripts -%}
+    {{ super() }}
+
+    {% asset "tables/tables-js" %}
+{% endblock %}

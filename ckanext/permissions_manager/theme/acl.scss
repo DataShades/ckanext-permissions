@@ -10,4 +10,19 @@
     .form-actions .btn {
         flex-basis: unset;
     }
+
+
+    .tabulator-wrapper {
+        .tabulator-container {
+            background: unset;
+
+            .tabulator-tableholder {
+                background: white;
+            }
+        }
+    }
+    .tabulator-footer {
+        background-color: transparent;
+    }
+
 }

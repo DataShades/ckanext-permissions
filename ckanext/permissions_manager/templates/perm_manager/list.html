@@ -45,7 +45,7 @@
         <div class="perm-cascade-notice alert alert-info d-none" role="status" aria-live="polite"></div>
 
         <div class="perm-matrix">
-            <table class="table" id="permissions-table" data-module="perm-permission-dependencies">
+            <table class="table table-bordered" id="permissions-table" data-module="perm-permission-dependencies">
                 <thead>
                     <tr>
                         <th class="perm-matrix-name">{{ _("Permission") }}</th>
@@ -122,7 +122,7 @@
             </table>
         </div>
 
-        <div class="form-actions perm-matrix-actions">
+        <div class="form-actions perm-matrix-actions mt-4">
             <span class="perm-unsaved-count text-muted me-auto" aria-live="polite"></span>
             <button type="reset" class="btn btn-outline-primary">{{ _("Discard changes") }}</button>
             <button type="submit" class="btn btn-primary">{{ _("Save") }}</button>
