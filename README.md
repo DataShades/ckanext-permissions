@@ -49,6 +49,9 @@ To stop users from raising their own access, `manage_dataset_collaborators` can'
 > [!NOTE]
 > Permissions given to the `anonymous` role apply to everyone, including visitors who are not logged in. Only `read_any_dataset` and `read_private_dataset` can be given to it; the others are disabled in its column on the permissions page.
 
+> [!NOTE]
+> CKAN gives a chain of auth functions the anonymous access flag of the function chained last. A plugin that chains `package_show`, `package_create` or `package_update` after `permissions` must keep `@tk.auth_allow_anonymous_access` on its function, or permissions given to the `anonymous` role stop working for visitors who aren't logged in.
+
 
 ## Requirements
 

@@ -1,5 +1,5 @@
-import logging
 from typing import cast
+from unittest import mock
 
 import pytest
 
@@ -140,7 +140,7 @@ class TestParsePermissionGroupsValidation:
             }
         )
 
-    def test_unknown_dependency_is_dropped(self, caplog):
+    def test_unknown_dependency_is_dropped(self):
         permission = PermissionDefinition(key="xxx", label="xxx", depends_on=["missing", "yyy"])
         groups = {
             "new_group": PermissionGroup(
@@ -150,11 +150,12 @@ class TestParsePermissionGroupsValidation:
             )
         }
 
-        with caplog.at_level(logging.WARNING, logger="ckanext.permissions.utils"):
+        with mock.patch.object(utils.log, "warning") as warning:
             assert validate_groups(groups)
 
         assert permission["depends_on"] == ["yyy"]
-        assert "depends on 'missing', which no loaded group defines" in caplog.text
+        assert warning.call_count == 1
+        assert warning.call_args.args[1:] == ("xxx", "missing")
 
     def test_depends_on_itself(self):
         with pytest.raises(tk.ValidationError, match="depends on itself"):

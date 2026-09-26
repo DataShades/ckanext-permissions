@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Any, cast
 
 import ckan.plugins.toolkit as tk
@@ -10,6 +11,20 @@ import ckanext.permissions.const as perm_const
 import ckanext.permissions.utils as perm_utils
 
 _SUPPRESSED_PERMISSIONS = "permissions_suppressed"
+
+
+def _chained_auth(*, allow_anonymous: bool) -> Callable[[types.ChainedAuthFunction], types.ChainedAuthFunction]:
+    """Chain an auth function and set its anonymous access flag explicitly.
+
+    CKAN copies only the outermost chained function's flags onto the whole
+    chain, so this flag replaces the one of the core auth function.
+    """
+    set_anonymous_access = tk.auth_allow_anonymous_access if allow_anonymous else tk.auth_disallow_anonymous_access
+
+    def decorator(func: types.ChainedAuthFunction) -> types.ChainedAuthFunction:
+        return set_anonymous_access(tk.chained_auth_function(func))
+
+    return decorator
 
 
 def _get_user(context: types.Context) -> model.User | model.AnonymousUser:
@@ -84,8 +99,7 @@ def _can_manage_organization_member(
     )
 
 
-@tk.chained_auth_function
-@tk.auth_allow_anonymous_access
+@_chained_auth(allow_anonymous=True)
 def package_create(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
@@ -105,8 +119,7 @@ def package_create(
     return next_(context, data_dict or {})
 
 
-@tk.chained_auth_function
-@tk.auth_allow_anonymous_access
+@_chained_auth(allow_anonymous=True)
 def package_show(
     next_: types.AuthFunction,
     context: types.Context,
@@ -134,8 +147,7 @@ def package_show(
     return next_(context, data_dict or {})
 
 
-@tk.chained_auth_function
-@tk.auth_allow_anonymous_access
+@_chained_auth(allow_anonymous=True)
 def package_update(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
@@ -145,8 +157,7 @@ def package_update(
     return next_(context, data_dict or {})
 
 
-@tk.chained_auth_function
-@tk.auth_allow_anonymous_access
+@_chained_auth(allow_anonymous=False)
 def package_delete(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
@@ -156,8 +167,7 @@ def package_delete(
     return next_(_suppress(context, "update_any_dataset"), data_dict or {})
 
 
-@tk.chained_auth_function
-@tk.auth_allow_anonymous_access
+@_chained_auth(allow_anonymous=False)
 def resource_delete(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
@@ -167,7 +177,7 @@ def resource_delete(
     return next_(_suppress(context, "update_any_dataset", "delete_any_dataset"), data_dict or {})
 
 
-@tk.chained_auth_function
+@_chained_auth(allow_anonymous=False)
 def dataset_purge(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
@@ -186,7 +196,7 @@ def _manage_collaborators(
     return next_(context, data_dict or {})
 
 
-@tk.chained_auth_function
+@_chained_auth(allow_anonymous=False)
 def package_collaborator_create(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
@@ -199,14 +209,15 @@ def package_collaborator_create(
     return _manage_collaborators(next_, context, data_dict)
 
 
-@tk.chained_auth_function
+@_chained_auth(allow_anonymous=False)
 def package_collaborator_delete(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
     return _manage_collaborators(next_, context, data_dict)
 
 
-@tk.chained_auth_function
+# Core allows anonymous access here, then fails on an assertion for anonymous users.
+@_chained_auth(allow_anonymous=False)
 def package_collaborator_list(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
@@ -224,28 +235,28 @@ def _bulk_update(
     return next_(context, data_dict or {})
 
 
-@tk.chained_auth_function
+@_chained_auth(allow_anonymous=False)
 def bulk_update_private(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
     return _bulk_update(next_, context, data_dict)
 
 
-@tk.chained_auth_function
+@_chained_auth(allow_anonymous=False)
 def bulk_update_public(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
     return _bulk_update(next_, context, data_dict)
 
 
-@tk.chained_auth_function
+@_chained_auth(allow_anonymous=False)
 def bulk_update_delete(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
     return _bulk_update(next_, context, data_dict)
 
 
-@tk.chained_auth_function
+@_chained_auth(allow_anonymous=False)
 def organization_create(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
@@ -255,7 +266,7 @@ def organization_create(
     return next_(context, data_dict or {})
 
 
-@tk.chained_auth_function
+@_chained_auth(allow_anonymous=False)
 def group_create(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
@@ -269,7 +280,7 @@ def _can_manage_group(user: model.User | model.AnonymousUser, group: model.Group
     return bool(group and not group.is_organization and perm_utils.check_permission("manage_any_group", user))
 
 
-@tk.chained_auth_function
+@_chained_auth(allow_anonymous=False)
 def group_update(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
@@ -279,7 +290,7 @@ def group_update(
     return next_(context, data_dict or {})
 
 
-@tk.chained_auth_function
+@_chained_auth(allow_anonymous=False)
 def group_member_create(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
@@ -289,7 +300,7 @@ def group_member_create(
     return next_(context, data_dict or {})
 
 
-@tk.chained_auth_function
+@_chained_auth(allow_anonymous=False)
 def organization_member_create(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
@@ -301,7 +312,7 @@ def organization_member_create(
     return next_(context, data_dict or {})
 
 
-@tk.chained_auth_function
+@_chained_auth(allow_anonymous=False)
 def group_edit_permissions(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
@@ -318,7 +329,7 @@ def group_edit_permissions(
     return next_(context, data_dict or {})
 
 
-@tk.chained_auth_function
+@_chained_auth(allow_anonymous=False)
 def member_create(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:

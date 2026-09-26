@@ -4,10 +4,12 @@ from typing import Any
 import pytest
 
 import ckan.plugins.toolkit as tk
-from ckan import model
+from ckan import authz, model
+from ckan.logic.auth import create, delete, get, patch, update
 from ckan.tests.helpers import call_action, call_auth
 
 from ckanext.permissions import const, utils
+from ckanext.permissions.logic import auth as perm_auth
 
 
 def _with_dependencies(permission: str) -> list[str]:
@@ -414,3 +416,27 @@ class TestGroupPermissions:
 
         with pytest.raises(tk.NotAuthorized):
             call_auth("group_update", {"user": user["name"]}, id=group_factory()["id"])
+
+
+CHAINED_AUTH_FUNCTIONS = sorted(
+    name for name, func in vars(perm_auth).items() if getattr(func, "chained_auth_function", False) is True
+)
+
+ANONYMOUS_ACCESS_DIFFERS_FROM_CORE = {"package_collaborator_list": False}
+
+
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestChainedAuthAnonymousAccess:
+    """CKAN gives the whole chain the anonymous access flag of its outermost function."""
+
+    @pytest.mark.parametrize("name", CHAINED_AUTH_FUNCTIONS)
+    def test_matches_core(self, name):
+        resolved = authz._AuthFunctions.get(name)
+        core = next(getattr(module, name) for module in (get, create, update, delete, patch) if hasattr(module, name))
+        expected = ANONYMOUS_ACCESS_DIFFERS_FROM_CORE.get(name, core.auth_allow_anonymous_access)
+
+        assert resolved.auth_allow_anonymous_access is expected
+
+    def test_anonymous_collaborator_list_is_denied(self, dataset_factory):
+        with pytest.raises(tk.NotAuthorized):
+            call_auth("package_collaborator_list", {"user": ""}, id=dataset_factory()["id"])
