@@ -114,7 +114,7 @@ ckanext.permissions.permission_groups =
     ckanext.myext:permissions.yaml
 ```
 
-Setting this option replaces the default list, so include `ckanext.permissions:default_group.yaml` to keep the default permissions. A file whose module can't be imported or whose path doesn't exist is skipped silently.
+Setting this option replaces the default list, so include `ckanext.permissions:default_group.yaml` to keep the default permissions. A file whose module can't be imported or whose path doesn't exist is skipped silently. Grants of a permission that no loaded file defines any more stay in the database but have no effect; the permissions page shows how many there are, and `ckan permissions orphans` lists or deletes them.
 
 ### Permission group format
 
@@ -135,7 +135,7 @@ permissions:
       - review_dataset
 ```
 
-`name`, `description` and at least one permission are required, and every permission needs a `key` and a `label`. Keys must be unique across all loaded groups. Invalid groups stop CKAN from starting.
+`name`, `description` and at least one permission are required, and every permission needs a `key` and a `label`. Keys must be unique across all loaded groups. Invalid groups stop CKAN from starting. A dependency on a permission that no loaded group defines, for example after its file is removed from the config, is ignored with a warning in the log.
 
 `depends_on` lists permissions a role must have before it can be given this one; they can come from any loaded group. Saving the permissions page fails if a role would end up with a permission but not its dependencies, including when a dependency is removed while the permission is kept. On the page, ticking a permission also ticks its dependencies for that role, and unticking a dependency unticks the permissions that need it. The rule applies when permissions are saved, so grants made before a dependency was added keep working until they're edited.
 
@@ -157,6 +157,9 @@ ckan -c /etc/ckan/default/ckan.ini permissions assign-default-user-roles [ROLE]
 
 # Remove the global ROLE (default: authenticated) from the given users, or from all users
 ckan -c /etc/ckan/default/ckan.ini permissions remove-role-from-users [ROLE] [-u USER_ID ...]
+
+# List role grants of permissions that no loaded permission group defines, or delete them
+ckan -c /etc/ckan/default/ckan.ini permissions orphans [--delete]
 ```
 
 

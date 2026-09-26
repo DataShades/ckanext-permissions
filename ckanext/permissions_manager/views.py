@@ -65,6 +65,7 @@ class PermissionManagerView(MethodView):
                 "submitted": submitted or {},
                 "error_messages": flatten_errors(errors),
                 "error_cells": self._get_error_cells(submitted or {}, errors),
+                "unregistered_grants": len(utils.get_unregistered_grants()),
             },
         )
 

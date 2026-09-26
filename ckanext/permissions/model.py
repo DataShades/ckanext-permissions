@@ -202,6 +202,15 @@ class RolePermission(tk.BaseModel):
         return query.one_or_none()
 
     @classmethod
+    def get_unregistered(cls, registered: list[str]) -> list[Self]:
+        """Get the grants of permissions missing from the registered ones."""
+        query: Query = (
+            model.Session.query(cls).filter(cls.permission.notin_(registered)).order_by(cls.permission, cls.role_id)
+        )
+
+        return query.all()
+
+    @classmethod
     def create(cls, role_id: str, permission: str, commit: bool = True) -> Self:
         role_permission = cls(role_id=role_id, permission=permission)
 

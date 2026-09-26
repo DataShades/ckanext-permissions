@@ -1,3 +1,4 @@
+import logging
 from typing import cast
 
 import pytest
@@ -139,17 +140,21 @@ class TestParsePermissionGroupsValidation:
             }
         )
 
-    def test_depends_on_unknown_permission(self):
-        with pytest.raises(tk.ValidationError, match="depends on unknown permission missing"):
-            validate_groups(
-                {
-                    "new_group": PermissionGroup(
-                        name="xxx",
-                        description="xxx",
-                        permissions=[PermissionDefinition(key="xxx", label="xxx", depends_on=["missing"])],
-                    )
-                }
+    def test_unknown_dependency_is_dropped(self, caplog):
+        permission = PermissionDefinition(key="xxx", label="xxx", depends_on=["missing", "yyy"])
+        groups = {
+            "new_group": PermissionGroup(
+                name="xxx",
+                description="xxx",
+                permissions=[permission, PermissionDefinition(key="yyy", label="yyy")],
             )
+        }
+
+        with caplog.at_level(logging.WARNING, logger="ckanext.permissions.utils"):
+            assert validate_groups(groups)
+
+        assert permission["depends_on"] == ["yyy"]
+        assert "depends on 'missing', which no loaded group defines" in caplog.text
 
     def test_depends_on_itself(self):
         with pytest.raises(tk.ValidationError, match="depends on itself"):
@@ -238,6 +243,32 @@ class TestCheckPermission:
         )
 
         assert utils.check_permission("perm_1", anon_user)
+
+    def test_unregistered_permission_is_never_granted(self, user_factory, test_role, organization_factory):
+        from ckanext.permissions import model as perm_model
+
+        user = cast(model.User, model.User.get(user_factory()["id"]))
+        org = organization_factory()
+
+        perm_model.RolePermission.create(test_role["id"], "removed_permission")
+        perm_model.RolePermission.create(const.Roles.Anonymous.value, "removed_permission")
+        perm_model.UserRole.create(user.id, test_role["id"])
+        perm_model.UserRole.create(user.id, test_role["id"], const.SCOPE_ORGANIZATION, org["id"])
+
+        assert not utils.check_permission("removed_permission", user)
+        assert not utils.check_permission("removed_permission", model.AnonymousUser())
+        assert not utils.check_organization_permission("removed_permission", user, org["id"])
+        assert not utils.get_permission_scope_ids(["removed_permission"], user, const.SCOPE_ORGANIZATION)
+
+    def test_get_unregistered_grants(self, test_role):
+        from ckanext.permissions import model as perm_model
+
+        call_action("permissions_update", permissions={"perm_1": {test_role["id"]: True}})
+        perm_model.RolePermission.create(test_role["id"], "removed_permission")
+
+        grants = utils.get_unregistered_grants()
+
+        assert [(grant.permission, grant.role_id) for grant in grants] == [("removed_permission", test_role["id"])]
 
     def test_anonymous_grant_applies_to_logged_in_user(self, user_factory, organization_factory):
         user = cast(model.User, model.User.get(user_factory()["id"]))

@@ -17,6 +17,8 @@ import ckanext.permissions.types as perm_types
 
 log = logging.getLogger(__name__)
 
+_reported_unregistered: set[str] = set()
+
 
 def parse_permission_group_schemas() -> dict[str, perm_types.PermissionGroup]:
     groups = _load_schemas(tk.aslist(tk.config.get("ckanext.permissions.permission_groups")), "name")
@@ -85,20 +87,45 @@ def validate_groups(groups: dict[str, perm_types.PermissionGroup]) -> bool:
             dependencies[permission["key"]] = permission.get("depends_on", [])
             anonymous[permission["key"]] = permission.get("anonymous", True)
 
+    _drop_unknown_dependencies(groups, dependencies)
     _validate_dependencies(dependencies)
     _validate_anonymous(dependencies, anonymous)
 
     return True
 
 
+def _drop_unknown_dependencies(
+    groups: dict[str, perm_types.PermissionGroup], dependencies: dict[str, list[str]]
+) -> None:
+    """Drop dependencies on permissions that no loaded group defines.
+
+    A group file removed from the config shouldn't stop CKAN from starting,
+    or the `orphans` command couldn't clean up after it.
+    """
+    for group in groups.values():
+        for permission in group["permissions"]:
+            depends_on = permission.get("depends_on") or []
+            known = [dependency for dependency in depends_on if dependency in dependencies]
+
+            if len(known) == len(depends_on):
+                continue
+
+            for dependency in depends_on:
+                if dependency not in dependencies:
+                    log.warning(
+                        "Permission '%s' depends on '%s', which no loaded group defines; ignoring the dependency",
+                        permission["key"],
+                        dependency,
+                    )
+
+            permission["depends_on"] = known
+            dependencies[permission["key"]] = known
+
+
 def _validate_dependencies(dependencies: dict[str, list[str]]) -> None:
     for key, depends_on in dependencies.items():
-        for dependency in depends_on:
-            if dependency == key:
-                raise tk.ValidationError(f"Permission {key} depends on itself")
-
-            if dependency not in dependencies:
-                raise tk.ValidationError(f"Permission {key} depends on unknown permission {dependency}")
+        if key in depends_on:
+            raise tk.ValidationError(f"Permission {key} depends on itself")
 
 
 def _validate_anonymous(dependencies: dict[str, list[str]], anonymous: dict[str, bool]) -> None:
@@ -192,6 +219,9 @@ def check_permission(
     Returns:
         bool: True if user has the permission, False otherwise
     """
+    if not _is_registered(permission):
+        return False
+
     if scope == perm_const.SCOPE_GLOBAL and _anonymous_has_permission(permission):
         return True
 
@@ -199,6 +229,31 @@ def check_permission(
         return False
 
     return perm_model.UserRole.has_permission(user.id, permission, scope, scope_id)
+
+
+def _is_registered(permission: str) -> bool:
+    """Check that a loaded permission group defines the permission.
+
+    Grants of permissions that are no longer defined stay in the database but
+    have no effect, because the permissions page can't show or revoke them.
+    """
+    if permission in get_permissions():
+        return True
+
+    if permission not in _reported_unregistered:
+        _reported_unregistered.add(permission)
+        log.warning(
+            "Permission '%s' is not defined by any group in ckanext.permissions.permission_groups, "
+            "so it is never granted",
+            permission,
+        )
+
+    return False
+
+
+def get_unregistered_grants() -> list[perm_model.RolePermission]:
+    """Get the role grants of permissions that no loaded permission group defines."""
+    return perm_model.RolePermission.get_unregistered(list(get_permissions()))
 
 
 def _anonymous_has_permission(permission: str) -> bool:
@@ -267,7 +322,9 @@ def get_permission_scope_ids(
     Returns:
         set[str]: The scope IDs, e.g. organization IDs
     """
-    if isinstance(user, model.AnonymousUser):
+    permissions = [permission for permission in permissions if _is_registered(permission)]
+
+    if isinstance(user, model.AnonymousUser) or not permissions:
         return set()
 
     return perm_model.UserRole.get_scope_ids_with_permissions(user.id, permissions, scope)

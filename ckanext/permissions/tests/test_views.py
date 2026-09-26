@@ -286,6 +286,19 @@ class TestPermissionMatrix:
         assert 'id="anonymous-update_any_dataset"' not in body
         assert 'name="update_any_dataset|anonymous"' in body
 
+    def test_unregistered_grants_notice(self, app, sysadmin):
+        url = tk.h.url_for("perm_manager.permission_list")
+        headers = {"Authorization": sysadmin["token"]}
+
+        assert "ckan permissions orphans" not in app.get(url, headers=headers, status=200).body
+
+        perm_model.RolePermission.create(const.Roles.Authenticated.value, "removed_permission")
+
+        body = app.get(url, headers=headers, status=200).body
+
+        assert "1 grant of a permission that no permission group defines" in body
+        assert "ckan permissions orphans --delete" in body
+
     def test_toggles_have_accessible_name(self, app, sysadmin):
         body = app.get(
             tk.h.url_for("perm_manager.permission_list"), headers={"Authorization": sysadmin["token"]}, status=200

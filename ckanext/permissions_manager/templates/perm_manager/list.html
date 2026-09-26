@@ -31,6 +31,17 @@
     <form action="" method="POST" data-module="perm-permission-matrix">
         {{ h.csrf_input() }}
 
+        {% if unregistered_grants %}
+            <div class="alert alert-warning" role="status">
+                {{ ungettext(
+                    "{count} grant of a permission that no permission group defines has no effect.",
+                    "{count} grants of permissions that no permission group defines have no effect.",
+                    unregistered_grants
+                ).format(count=unregistered_grants) }}
+                {{ _("List and remove them with") }} <code>ckan permissions orphans --delete</code>.
+            </div>
+        {% endif %}
+
         {% if error_messages %}
             <div class="alert alert-danger" role="alert">
                 <p>{{ _("Permissions were not saved. Fix the highlighted cells and save again:") }}</p>
