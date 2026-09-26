@@ -239,6 +239,19 @@ class TestCheckPermission:
 
         assert utils.check_permission("perm_1", anon_user)
 
+    def test_anonymous_grant_applies_to_logged_in_user(self, user_factory, organization_factory):
+        user = cast(model.User, model.User.get(user_factory()["id"]))
+        org = organization_factory()
+
+        call_action(
+            "permissions_update",
+            permissions={"perm_1": {const.Roles.Anonymous.value: True}},
+        )
+
+        assert utils.check_permission("perm_1", user)
+        assert not utils.check_permission("perm_1", user, const.SCOPE_ORGANIZATION, org["id"])
+        assert utils.check_organization_permission("perm_1", user, org["id"])
+
     def test_scoped_role(self, user_factory, test_role, organization_factory):
         from ckanext.permissions import model as perm_model
 

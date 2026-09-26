@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from typing import Any, cast
+
 import ckan.plugins.toolkit as tk
 from ckan import authz, model, types
 from ckan.logic.auth.create import _check_group_auth
@@ -7,9 +9,32 @@ from ckan.logic.auth.create import _check_group_auth
 import ckanext.permissions.const as perm_const
 import ckanext.permissions.utils as perm_utils
 
+_SUPPRESSED_PERMISSIONS = "permissions_suppressed"
+
 
 def _get_user(context: types.Context) -> model.User | model.AnonymousUser:
     return model.User.get(context.get("user")) or model.AnonymousUser()
+
+
+def _get_suppressed(context: types.Context) -> frozenset[str]:
+    return cast("dict[str, Any]", context).get(_SUPPRESSED_PERMISSIONS, frozenset())
+
+
+def _suppress(context: types.Context, *permissions: str) -> types.Context:
+    """Copy the context for core auth, so it can't reach our grants for these permissions.
+
+    Core `package_delete` auth defers to `package_update`, and `resource_delete`
+    to `package_delete`. Without this, `update_any_dataset` would also allow
+    deleting datasets and resources.
+    """
+    return cast(types.Context, {**context, _SUPPRESSED_PERMISSIONS: _get_suppressed(context) | set(permissions)})
+
+
+def _check_package_permission(permission: str, context: types.Context, package: model.Package | None) -> bool:
+    if permission in _get_suppressed(context):
+        return False
+
+    return perm_utils.check_package_permission(permission, _get_user(context), package)
 
 
 def _get_package(data_dict: types.DataDict | None) -> model.Package | None:
@@ -114,7 +139,7 @@ def package_show(
 def package_update(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
-    if perm_utils.check_package_permission("update_any_dataset", _get_user(context), _get_package(data_dict)):
+    if _check_package_permission("update_any_dataset", context, _get_package(data_dict)):
         return {"success": True}
 
     return next_(context, data_dict or {})
@@ -125,10 +150,10 @@ def package_update(
 def package_delete(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
-    if perm_utils.check_package_permission("delete_any_dataset", _get_user(context), _get_package(data_dict)):
+    if _check_package_permission("delete_any_dataset", context, _get_package(data_dict)):
         return {"success": True}
 
-    return next_(context, data_dict or {})
+    return next_(_suppress(context, "update_any_dataset"), data_dict or {})
 
 
 @tk.chained_auth_function
@@ -136,10 +161,10 @@ def package_delete(
 def resource_delete(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
-    if perm_utils.check_package_permission("delete_any_resource", _get_user(context), _get_resource_package(data_dict)):
+    if _check_package_permission("delete_any_resource", context, _get_resource_package(data_dict)):
         return {"success": True}
 
-    return next_(context, data_dict or {})
+    return next_(_suppress(context, "update_any_dataset", "delete_any_dataset"), data_dict or {})
 
 
 @tk.chained_auth_function

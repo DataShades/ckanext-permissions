@@ -27,3 +27,20 @@ class TestPermissionLabels:
         )
 
         app.get(tk.h.url_for("dataset.read", id=dataset["id"]), headers={}, status=200)
+
+    def test_anonymous_grant_shows_private_dataset_to_logged_in_user_in_search(
+        self, user: dict[str, Any], dataset_factory: Callable[..., dict[str, Any]]
+    ):
+        dataset = dataset_factory(private=True)
+        context = {"user": user["name"], "ignore_auth": False}
+
+        assert not call_action("package_search", context, include_private=True)["results"]
+
+        call_action(
+            "permissions_update",
+            permissions={"read_private_dataset": {"anonymous": True}},
+        )
+
+        result = call_action("package_search", context, include_private=True)
+
+        assert [pkg["id"] for pkg in result["results"]] == [dataset["id"]]

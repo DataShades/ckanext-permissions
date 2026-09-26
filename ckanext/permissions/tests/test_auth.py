@@ -144,9 +144,49 @@ class TestGlobalAuth:
 
         assert model.Resource.get(resource["id"]).state == model.State.DELETED
 
+    @pytest.mark.parametrize(
+        ("auth", "permission"),
+        [
+            ("package_delete", "update_any_dataset"),
+            ("resource_delete", "update_any_dataset"),
+            ("resource_delete", "delete_any_dataset"),
+        ],
+    )
+    def test_not_granted_through_core_delegation(
+        self, global_user, dataset_factory, resource_factory, auth, permission
+    ):
+        user = global_user(permission)
+        dataset = dataset_factory(private=True)
+        resource = resource_factory(package_id=dataset["id"])
+
+        with pytest.raises(tk.NotAuthorized):
+            _call_dataset_auth(auth, user["name"], dataset, resource)
+
+    def test_organization_editor_can_still_delete(
+        self, user_factory, organization_factory, dataset_factory, resource_factory
+    ):
+        user = user_factory()
+        org = organization_factory(users=[{"name": user["name"], "capacity": "editor"}])
+        dataset = dataset_factory(owner_org=org["id"])
+        resource = resource_factory(package_id=dataset["id"])
+
+        assert call_auth("package_delete", {"user": user["name"]}, id=dataset["id"])
+        assert call_auth("resource_delete", {"user": user["name"]}, id=resource["id"])
+
     def test_anonymous_role(self, dataset_factory):
         dataset = dataset_factory(private=True)
         context = {"user": "", "package": model.Package.get(dataset["id"])}
+
+        with pytest.raises(tk.NotAuthorized):
+            call_auth("package_show", context, id=dataset["id"])
+
+        call_action("permissions_update", permissions={"read_private_dataset": {const.Roles.Anonymous.value: True}})
+
+        assert call_auth("package_show", context, id=dataset["id"])
+
+    def test_anonymous_role_applies_to_logged_in_users(self, user, dataset_factory):
+        dataset = dataset_factory(private=True)
+        context = {"user": user["name"], "package": model.Package.get(dataset["id"])}
 
         with pytest.raises(tk.NotAuthorized):
             call_auth("package_show", context, id=dataset["id"])

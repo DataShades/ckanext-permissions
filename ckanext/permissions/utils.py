@@ -181,6 +181,8 @@ def check_permission(
 ) -> bool:
     """Check if user has the given permission through any of their roles.
 
+    The global grants of the anonymous role apply to every user, logged in or not.
+
     Args:
         permission: The permission key to check
         user: The user to check permissions for
@@ -190,14 +192,22 @@ def check_permission(
     Returns:
         bool: True if user has the permission, False otherwise
     """
+    if scope == perm_const.SCOPE_GLOBAL and _anonymous_has_permission(permission):
+        return True
+
     if isinstance(user, model.AnonymousUser):
-        return (
-            scope == perm_const.SCOPE_GLOBAL
-            and not is_permission_blocked_for_role(permission, perm_const.Roles.Anonymous.value)
-            and perm_model.RolePermission.get(perm_const.Roles.Anonymous.value, permission) is not None
-        )
+        return False
 
     return perm_model.UserRole.has_permission(user.id, permission, scope, scope_id)
+
+
+def _anonymous_has_permission(permission: str) -> bool:
+    anonymous = perm_const.Roles.Anonymous.value
+
+    return (
+        not is_permission_blocked_for_role(permission, anonymous)
+        and perm_model.RolePermission.get(anonymous, permission) is not None
+    )
 
 
 def check_package_permission(
