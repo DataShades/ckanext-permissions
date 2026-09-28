@@ -284,6 +284,17 @@ class TestCheckPermission:
         assert not utils.check_permission("perm_1", user, const.SCOPE_ORGANIZATION, org["id"])
         assert utils.check_organization_permission("perm_1", user, org["id"])
 
+    def test_authenticated_grant_applies_to_every_logged_in_user(self, user_factory, organization_factory):
+        user = cast(model.User, model.User.get(user_factory()["id"]))
+        org = organization_factory()
+
+        call_action("permissions_update", permissions={"perm_1": {const.Roles.Authenticated.value: True}})
+
+        assert utils.check_permission("perm_1", user)
+        assert not utils.check_permission("perm_1", model.AnonymousUser())
+        assert not utils.check_permission("perm_1", user, const.SCOPE_ORGANIZATION, org["id"])
+        assert utils.check_organization_permission("perm_1", user, org["id"])
+
     def test_scoped_role(self, user_factory, test_role, organization_factory):
         from ckanext.permissions import model as perm_model
 
@@ -301,32 +312,6 @@ class TestCheckPermission:
         assert not utils.check_permission("perm_1", user, const.SCOPE_ORGANIZATION, other_org["id"])
         assert not utils.check_permission("perm_1", user, "org", org["id"])
         assert not utils.check_permission("perm_1", user)
-
-
-@pytest.mark.usefixtures("with_plugins", "clean_db")
-class TestEnsureDefaultRoles:
-    def test_creates_default_roles(self, reset_db, migrate_db_for):
-        """Test that ensure_default_roles creates all default roles."""
-        from ckanext.permissions import model as perm_model
-
-        for role in perm_model.Role.all():
-            perm_model.Role.delete(perm_model.Role.get(role["id"]))
-
-        assert len(perm_model.Role.all()) == 0
-
-        created_count = utils.ensure_default_roles()
-
-        assert created_count == 3
-
-        assert perm_model.Role.get("anonymous") is not None
-        assert perm_model.Role.get("authenticated") is not None
-        assert perm_model.Role.get("administrator") is not None
-
-    def test_reuse(self):
-        """Test that ensure_default_roles can be called multiple times."""
-        # Call ensure_default_roles after initial call in conftest.py
-        addiitonal_call = utils.ensure_default_roles()
-        assert addiitonal_call == 0
 
 
 @pytest.mark.usefixtures("with_plugins", "clean_db")

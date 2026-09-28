@@ -57,12 +57,13 @@ def user_roles_update(
     user_id_or_name_exists: types.Validator,
     list_of_strings: types.Validator,
     roles_exists: types.Validator,
+    roles_assignable: types.Validator,
     default: types.ValidatorFactory,
     one_of: types.ValidatorFactory,
 ) -> types.Schema:
     return {
         "user_id": [not_empty, unicode_safe, user_id_or_name_exists],
-        "roles": [not_missing, list_of_strings, roles_exists],
+        "roles": [not_missing, list_of_strings, roles_exists, roles_assignable],
         "scope": [
             default(perm_const.SCOPE_GLOBAL),
             unicode_safe,

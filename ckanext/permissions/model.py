@@ -218,6 +218,12 @@ class RolePermission(tk.BaseModel):
         return query.one_or_none()
 
     @classmethod
+    def is_granted_to_any(cls, role_ids: list[str], permission: str) -> bool:
+        query: Query = model.Session.query(cls).filter(cls.role_id.in_(role_ids), cls.permission == permission)
+
+        return bool(model.Session.query(query.exists()).scalar())
+
+    @classmethod
     def get_for_role(cls, role_id: str) -> list[str]:
         query: Query = model.Session.query(cls.permission).filter(cls.role_id == role_id).order_by(cls.permission)
 

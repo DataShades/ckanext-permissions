@@ -14,6 +14,9 @@ class Roles(Enum):
     Administrator = "administrator"
 
 
+IMPLICIT_ROLES = frozenset({Roles.Anonymous.value, Roles.Authenticated.value})
+
+
 class ChangeAction(Enum):
     RoleCreated = "role_created"
     RoleUpdated = "role_updated"

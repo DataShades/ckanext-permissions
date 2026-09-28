@@ -68,19 +68,28 @@ class TestRoleChangeLog:
 class TestUserRoleChangeLog:
     def test_assign_and_unassign_are_recorded(self, user, test_role: dict[str, Any]):
         call_action("permission_user_roles_update", user_id=user["id"], roles=[test_role["id"]])
+        call_action("permission_user_roles_update", user_id=user["id"], roles=[])
 
-        [assigned] = _entries(test_role["id"])[1:]
-        [unassigned] = _entries(const.Roles.Authenticated.value)
+        [assigned, unassigned] = _entries(test_role["id"])[1:]
 
         assert assigned.action == const.ChangeAction.RoleAssigned.value
         assert unassigned.action == const.ChangeAction.RoleUnassigned.value
         assert assigned.user_id == unassigned.user_id == user["id"]
         assert assigned.data == {"label": test_role["label"], "user_label": user["fullname"], "scope": "global"}
 
-    def test_unchanged_roles_are_not_recorded(self, user):
-        call_action("permission_user_roles_update", user_id=user["id"], roles=[const.Roles.Authenticated.value])
+    def test_unchanged_roles_are_not_recorded(self, user, test_role: dict[str, Any]):
+        call_action("permission_user_roles_update", user_id=user["id"], roles=[test_role["id"]])
+        call_action("permission_user_roles_update", user_id=user["id"], roles=[test_role["id"]])
 
-        assert not _entries(const.Roles.Authenticated.value)
+        assert len(_entries(test_role["id"])) == 2
+
+    @pytest.mark.parametrize("role", sorted(const.IMPLICIT_ROLES))
+    def test_implicit_role_is_rejected(self, user, role):
+        with pytest.raises(tk.ValidationError) as e:
+            call_action("permission_user_roles_update", user_id=user["id"], roles=[role])
+
+        assert "applies to users automatically" in e.value.error_dict["roles"][0]
+        assert not _entries(role)
 
     def test_organization_scope_is_recorded(self, user, organization):
         call_action(

@@ -8,7 +8,7 @@ import ckan.plugins.toolkit as tk
 
 from ckanext.tables.shared import FormatterResult, Options, Value, formatters
 
-from ckanext.permissions.const import SCOPE_ORGANIZATION, ChangeAction
+from ckanext.permissions.const import SCOPE_ORGANIZATION, ChangeAction, Roles
 from ckanext.permissions.utils import get_permissions
 
 
@@ -27,6 +27,21 @@ class RoleLabelFormatter(formatters.BaseFormatter):
             f'{label} <span class="text-muted ms-1" title="{hint}">'
             f'<i class="fa fa-lock" aria-hidden="true"></i><span class="visually-hidden">{hint}</span></span>'
         )
+
+
+class RoleUsersFormatter(formatters.BaseFormatter):
+    """Render the number of users with the role; the implicit roles apply to everyone."""
+
+    def format(self, value: Value, options: Options) -> FormatterResult:  # noqa: ARG002
+        role_id = self.initial_row["id"]
+
+        if role_id == Roles.Anonymous.value:
+            return tk._("Everyone")
+
+        if role_id == Roles.Authenticated.value:
+            return tk._("Logged-in users")
+
+        return value
 
 
 class UserLinkFormatter(formatters.BaseFormatter):

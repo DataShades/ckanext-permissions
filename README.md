@@ -12,7 +12,9 @@ The extension allows you to build a Access Control List (ACL) system within CKAN
 
 ### Roles
 
-The extension has a 3 default roles: `anonymous`, `authenticated` and `administrator`. And allows you to define custom roles.
+The extension has 3 default roles: `anonymous`, `authenticated` and `administrator`, and allows you to define custom roles.
+
+`anonymous` and `authenticated` are implicit: they aren't assigned to users. Permissions given to `anonymous` apply to everyone, and permissions given to `authenticated` apply to every logged-in user. `administrator` and custom roles apply only to the users they're assigned to. To keep a permission from some logged-in users, give it to a custom role instead of `authenticated`.
 
 ![roles.png](doc/roles.png)
 
@@ -85,22 +87,17 @@ Using GIT Clone:
    > [!WARNING]
    > `permissions` implements `IPermissionLabels`, and CKAN uses only the first enabled plugin that implements it. If another plugin also implements it, whichever comes first in `ckan.plugins` wins and the other's labels are ignored. When `permissions` loses, users granted `read_any_dataset` or `read_private_dataset` won't find private datasets in search. To combine both, write a plugin that subclasses `ckanext.permissions.implementation.permission_labels.PermissionLabels`, merges the other plugin's labels into its results, and is listed first.
 
-4. Initialize DB tables:
+4. Create the DB tables and the default roles:
    ```bash
    ckan -c /etc/ckan/default/ckan.ini db upgrade -p permissions
    ```
 
-5. Initialize default Roles and add Authenticated default role to all existing Users:
-   ```bash
-   ckan -c /etc/ckan/default/ckan.ini permissions assign-default-user-roles
-   ```
-
-6. Rebuild the search index, so that existing datasets get the permission labels used to filter search results. Without this, users granted `read_any_dataset` or `read_private_dataset` can open those datasets but won't find them in search:
+5. Rebuild the search index, so that existing datasets get the permission labels used to filter search results. Without this, users granted `read_any_dataset` or `read_private_dataset` can open those datasets but won't find them in search:
    ```bash
    ckan -c /etc/ckan/default/ckan.ini search-index rebuild
    ```
 
-7. Restart CKAN. For example:
+6. Restart CKAN. For example:
    ```bash
    sudo supervisorctl restart ckan-uwsgi
    ```
@@ -152,12 +149,6 @@ Your extension checks its own permissions with `ckanext.permissions.utils.check_
 ## CLI
 
 ```bash
-# Create the default roles (anonymous, authenticated, administrator) if they are missing
-ckan -c /etc/ckan/default/ckan.ini permissions init-default-roles
-
-# Create the default roles, then give ROLE (default: authenticated) to every active user
-ckan -c /etc/ckan/default/ckan.ini permissions assign-default-user-roles [ROLE]
-
 # List role grants of permissions that no loaded permission group defines, or delete them
 ckan -c /etc/ckan/default/ckan.ini permissions orphans [--delete]
 ```

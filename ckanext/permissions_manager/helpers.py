@@ -22,7 +22,7 @@ def permission_get_registered_roles_options() -> list[dict[str, str]]:
     return [
         {"value": role_id, "text": role_label}
         for role_id, role_label in get_registered_roles().items()
-        if role_id != const.Roles.Anonymous.value
+        if role_id not in const.IMPLICIT_ROLES
     ]
 
 

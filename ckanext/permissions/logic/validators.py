@@ -66,6 +66,19 @@ def roles_exists(roles: list[str]) -> list[str]:
     return roles
 
 
+def roles_assignable(roles: list[str]) -> list[str]:
+    """Ensure that none of the roles is implicit.
+
+    Raises:
+        tk.Invalid: if a role applies to users without being assigned
+    """
+    for role in roles:
+        if role in perm_const.IMPLICIT_ROLES:
+            raise tk.Invalid(tk._("Role {role} applies to users automatically and can't be assigned").format(role=role))
+
+    return roles
+
+
 def role_id_validator(value: str) -> str:
     """Validate a role ID.
 

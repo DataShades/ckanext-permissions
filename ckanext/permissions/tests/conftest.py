@@ -5,12 +5,19 @@ import pytest
 from faker import Faker
 from pytest_factoryboy import register
 
+from ckan import model
 from ckan.tests import factories
 
 import ckanext.permissions.model as perm_model
-from ckanext.permissions import utils as perm_utils
+from ckanext.permissions import const
 
 fake = Faker()
+
+DEFAULT_ROLE_LABELS = {
+    const.Roles.Anonymous.value: "Anonymous",
+    const.Roles.Authenticated.value: "Authenticated",
+    const.Roles.Administrator.value: "Administrator",
+}
 
 
 @pytest.fixture
@@ -18,7 +25,13 @@ def clean_db(reset_db, migrate_db_for):
     reset_db()
     migrate_db_for("permissions")
 
-    perm_utils.ensure_default_roles()
+    # After the first reset, `reset_db` only deletes rows and keeps the migration
+    # version, so the default roles created by a migration are gone and not recreated.
+    for role_id, label in DEFAULT_ROLE_LABELS.items():
+        if not perm_model.Role.get(role_id):
+            perm_model.Role.create(role_id, label, label, commit=False)
+
+    model.Session.commit()
 
 
 @register(_name="test_role")

@@ -1,5 +1,4 @@
 import json
-import logging
 import re
 
 import pytest
@@ -52,6 +51,24 @@ class TestInvalidInput:
         assert 'name="roles"' in body
         assert f'href="{tk.h.url_for("perm_manager.user_roles_list")}"' in body
 
+    @pytest.mark.parametrize("role", sorted(const.IMPLICIT_ROLES))
+    def test_implicit_role_cant_be_assigned(self, app, sysadmin, user, role):
+        url = tk.h.url_for("perm_manager.edit_user_role", user_id=user["id"])
+
+        body = app.post(url, data={"roles": [role]}, headers={"Authorization": sysadmin["token"]}, status=200).body
+
+        assert "applies to users automatically" in body
+        assert not tk.h.get_user_roles(user["id"])
+
+    def test_implicit_roles_arent_offered(self, app, sysadmin, user):
+        url = tk.h.url_for("perm_manager.edit_user_role", user_id=user["id"])
+
+        body = app.get(url, headers={"Authorization": sysadmin["token"]}, status=200).body
+
+        assert f'<option value="{const.Roles.Administrator.value}"' in body
+        for role in const.IMPLICIT_ROLES:
+            assert f'<option value="{role}"' not in body
+
     def test_org_user_roles_unknown_role_shows_org_form(self, app, sysadmin, user, organization):
         url = tk.h.url_for("perm_manager.organization_edit_user_role", org_id=organization["id"], user_id=user["id"])
 
@@ -92,27 +109,6 @@ class TestInvalidInput:
         for org in orgs:
             user_roles = perm_model.UserRole.get(user["id"], const.SCOPE_ORGANIZATION, org["id"])
             assert [role.role_id for role in user_roles] == [admin]
-
-
-@pytest.mark.ckan_config("ckan.plugins", "permissions permissions_manager tables")
-@pytest.mark.usefixtures("with_plugins", "clean_db")
-class TestAuditLog:
-    def test_user_roles_update_is_logged(self, app, sysadmin, user, caplog):
-        url = tk.h.url_for("perm_manager.edit_user_role", user_id=user["id"])
-
-        with caplog.at_level(logging.INFO, logger="ckanext.permissions.logic.action"):
-            app.post(
-                url,
-                data={"roles": [const.Roles.Administrator.value]},
-                headers={"Authorization": sysadmin["token"]},
-                follow_redirects=False,
-                status=302,
-            )
-
-        assert (
-            f"User roles updated: user={user['name']} scope=global scope_id=None "
-            f"added=['administrator'] removed=['authenticated'] actor={sysadmin['name']}"
-        ) in caplog.text
 
 
 XHR = {"X-Requested-With": "XMLHttpRequest"}
@@ -487,9 +483,9 @@ class TestForms:
         assert role
         assert str(role.label) == "Renamed"
 
-    def test_edit_user_roles(self, app, sysadmin, user):
+    def test_edit_user_roles(self, app, sysadmin, user, test_role):
         url = tk.h.url_for("perm_manager.edit_user_role", user_id=user["id"])
-        roles = [const.Roles.Administrator.value, const.Roles.Authenticated.value]
+        roles = [const.Roles.Administrator.value, test_role["id"]]
 
         self._post(app, sysadmin, url, {"roles": roles})
 

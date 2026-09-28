@@ -208,7 +208,9 @@ def check_permission(
 ) -> bool:
     """Check if user has the given permission through any of their roles.
 
-    The global grants of the anonymous role apply to every user, logged in or not.
+    The implicit roles aren't assigned: the global grants of the anonymous role
+    apply to every user, logged in or not, and those of the authenticated role
+    to every logged-in user.
 
     Args:
         permission: The permission key to check
@@ -222,7 +224,7 @@ def check_permission(
     if not _is_registered(permission):
         return False
 
-    if scope == perm_const.SCOPE_GLOBAL and _anonymous_has_permission(permission):
+    if scope == perm_const.SCOPE_GLOBAL and _implicit_roles_have_permission(permission, user):
         return True
 
     if isinstance(user, model.AnonymousUser):
@@ -256,13 +258,14 @@ def get_unregistered_grants() -> list[perm_model.RolePermission]:
     return perm_model.RolePermission.get_unregistered(list(get_permissions()))
 
 
-def _anonymous_has_permission(permission: str) -> bool:
+def _implicit_roles_have_permission(permission: str, user: model.User | model.AnonymousUser) -> bool:
     anonymous = perm_const.Roles.Anonymous.value
+    roles = [] if is_permission_blocked_for_role(permission, anonymous) else [anonymous]
 
-    return (
-        not is_permission_blocked_for_role(permission, anonymous)
-        and perm_model.RolePermission.get(anonymous, permission) is not None
-    )
+    if not isinstance(user, model.AnonymousUser):
+        roles.append(perm_const.Roles.Authenticated.value)
+
+    return bool(roles) and perm_model.RolePermission.is_granted_to_any(roles, permission)
 
 
 def check_package_permission(
@@ -342,44 +345,10 @@ def assign_role_to_user(user_id: str, role_id: str, scope: str = perm_const.SCOP
     if not perm_model.Role.get(role_id):
         log.warning(
             "Cannot assign role '%s' to user '%s': role does not exist. "
-            "Run `ckan permissions init-default-roles` to create default roles.",
+            "Run `ckan db upgrade -p permissions` to create the default roles.",
             role_id,
             user_id,
         )
         return
 
     perm_model.UserRole.create(user_id, role_id, scope, scope_id)
-
-
-def ensure_default_roles() -> int:
-    """Ensure default roles exist in the database.
-
-    Creates anonymous, authenticated, and administrator roles if they don't exist.
-
-    Returns:
-        int: Number of roles created
-    """
-    default_roles = [
-        ("anonymous", "Anonymous", "Default role for anonymous users"),
-        (
-            "authenticated",
-            "Authenticated",
-            "Regular user that will be assigned automatically for all users on a portal",
-        ),
-        (
-            "administrator",
-            "Administrator",
-            "Role for portal administrators. It has no permissions until they are granted on the permissions page",
-        ),
-    ]
-
-    created_count = 0
-    for role_id, label, description in default_roles:
-        existing_role = perm_model.Role.get(role_id)
-        if not existing_role:
-            perm_model.Role.create(role_id, label, description, commit=False)
-            created_count += 1
-
-    model.Session.commit()
-
-    return created_count

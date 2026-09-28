@@ -62,7 +62,12 @@ class RolesTable(t.TableDefinition):
                 ),
                 t.ColumnDefinition(field="id", title=tk._("ID"), width=130),
                 t.ColumnDefinition(field="description", title=tk._("Description"), min_width=300, tooltip=True),
-                t.ColumnDefinition(field="users", title=tk._("Users"), width=130),
+                t.ColumnDefinition(
+                    field="users",
+                    title=tk._("Users"),
+                    formatters=[(pf.RoleUsersFormatter, {})],
+                    width=130,
+                ),
                 t.ColumnDefinition(field="permissions", title=tk._("Permissions"), width=160),
             ],
             row_actions=[
