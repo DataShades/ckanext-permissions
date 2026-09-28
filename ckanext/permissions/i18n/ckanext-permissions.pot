@@ -1,0 +1,479 @@
+# Translations template for ckanext-permissions.
+# Copyright (C) 2026 ORGANIZATION
+# This file is distributed under the same license as the ckanext-permissions
+# project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: ckanext-permissions 0.8.0\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2026-09-28 12:14+0300\n"
+"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language-Team: LANGUAGE <LL@li.org>\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.18.0\n"
+
+#: ckanext/permissions/logic/action.py:117 ckanext/permissions_manager/views.py:271
+msgid "Organization not found"
+msgstr ""
+
+#: ckanext/permissions/logic/action.py:264
+#, python-brace-format
+msgid "{permission} can't be given to the {role} role"
+msgstr ""
+
+#: ckanext/permissions/logic/action.py:286
+#, python-brace-format
+msgid "{role} can't have {permission} without {permissions}"
+msgstr ""
+
+#: ckanext/permissions/logic/action.py:300
+#, python-brace-format
+msgid "{role} can't lose {permission} while it has {permissions}"
+msgstr ""
+
+#: ckanext/permissions/logic/action.py:329
+msgid "Invalid permission key"
+msgstr ""
+
+#: ckanext/permissions/logic/action.py:332
+msgid "Invalid permission mapping"
+msgstr ""
+
+#: ckanext/permissions/logic/action.py:336
+msgid "Invalid permission value"
+msgstr ""
+
+#: ckanext/permissions/logic/validators.py:28
+#, python-brace-format
+msgid "Role {role} already exists"
+msgstr ""
+
+#: ckanext/permissions/logic/validators.py:46
+#, python-brace-format
+msgid "Role {role} doesn't exist"
+msgstr ""
+
+#: ckanext/permissions/logic/validators.py:77
+#, python-brace-format
+msgid "Role {role} applies to users automatically and can't be assigned"
+msgstr ""
+
+#: ckanext/permissions/logic/validators.py:102
+#, python-brace-format
+msgid "Role ID must be at least {min} characters long."
+msgstr ""
+
+#: ckanext/permissions/logic/validators.py:107
+#, python-brace-format
+msgid "Role ID must be at most {max} characters long."
+msgstr ""
+
+#: ckanext/permissions/logic/validators.py:111
+msgid "Role ID can only contain lowercase letters (a-z), \"-\" and \"_\"."
+msgstr ""
+
+#: ckanext/permissions/logic/validators.py:129
+#, python-brace-format
+msgid "Role {role} is a default role."
+msgstr ""
+
+#: ckanext/permissions_manager/formatters.py:24
+msgid "Built-in role, it can't be deleted"
+msgstr ""
+
+#: ckanext/permissions_manager/formatters.py:39
+msgid "Everyone"
+msgstr ""
+
+#: ckanext/permissions_manager/formatters.py:42
+msgid "Logged-in users"
+msgstr ""
+
+#: ckanext/permissions_manager/formatters.py:92
+msgid "Role created"
+msgstr ""
+
+#: ckanext/permissions_manager/formatters.py:93
+msgid "Role updated"
+msgstr ""
+
+#: ckanext/permissions_manager/formatters.py:94
+msgid "Role deleted"
+msgstr ""
+
+#: ckanext/permissions_manager/formatters.py:95
+msgid "Permission granted"
+msgstr ""
+
+#: ckanext/permissions_manager/formatters.py:96
+msgid "Permission revoked"
+msgstr ""
+
+#: ckanext/permissions_manager/formatters.py:97
+msgid "Role assigned"
+msgstr ""
+
+#: ckanext/permissions_manager/formatters.py:98
+msgid "Role unassigned"
+msgstr ""
+
+#: ckanext/permissions_manager/formatters.py:118
+#: ckanext/permissions_manager/tables.py:58
+#: ckanext/permissions_manager/templates/perm_manager/add_role.html:24
+#: ckanext/permissions_manager/templates/perm_manager/edit_role.html:22
+msgid "Label"
+msgstr ""
+
+#: ckanext/permissions_manager/formatters.py:118
+#: ckanext/permissions_manager/tables.py:64
+#: ckanext/permissions_manager/templates/perm_manager/add_role.html:25
+#: ckanext/permissions_manager/templates/perm_manager/edit_role.html:23
+msgid "Description"
+msgstr ""
+
+#: ckanext/permissions_manager/formatters.py:122
+#: ckanext/permissions_manager/tables.py:71
+#: ckanext/permissions_manager/templates/header.html:6
+#: ckanext/permissions_manager/templates/header.html:8
+#: ckanext/permissions_manager/templates/perm_manager/base.html:28
+#: ckanext/permissions_manager/templates/perm_manager/list.html:6
+msgid "Permissions"
+msgstr ""
+
+#: ckanext/permissions_manager/formatters.py:132
+msgid "Global"
+msgstr ""
+
+#: ckanext/permissions_manager/formatters.py:134
+#, python-brace-format
+msgid "Organization: {organization}"
+msgstr ""
+
+#: ckanext/permissions_manager/formatters.py:138
+msgid "none"
+msgstr ""
+
+#: ckanext/permissions_manager/tables.py:63
+#: ckanext/permissions_manager/templates/perm_manager/add_role.html:18
+#: ckanext/permissions_manager/templates/perm_manager/edit_role.html:17
+msgid "ID"
+msgstr ""
+
+#: ckanext/permissions_manager/tables.py:67
+msgid "Users"
+msgstr ""
+
+#: ckanext/permissions_manager/tables.py:76
+msgid "Edit"
+msgstr ""
+
+#: ckanext/permissions_manager/tables.py:85
+msgid "Delete"
+msgstr ""
+
+#: ckanext/permissions_manager/tables.py:95
+msgid "Delete selected roles"
+msgstr ""
+
+#: ckanext/permissions_manager/tables.py:104
+msgid "Add a new role"
+msgstr ""
+
+#: ckanext/permissions_manager/tables.py:130
+msgid "Role has been deleted"
+msgid_plural "Roles have been deleted"
+msgstr[0] ""
+msgstr[1] ""
+
+#: ckanext/permissions_manager/tables.py:148
+msgid "No users match your filters."
+msgstr ""
+
+#: ckanext/permissions_manager/tables.py:152
+#: ckanext/permissions_manager/tables.py:304
+msgid "User"
+msgstr ""
+
+#: ckanext/permissions_manager/tables.py:158
+#: ckanext/permissions_manager/templates/organization/read_base.html:6
+#: ckanext/permissions_manager/templates/perm_manager/base.html:29
+#: ckanext/permissions_manager/templates/perm_manager/edit_user_roles.html:25
+#: ckanext/permissions_manager/templates/perm_manager/organization/edit_user_roles.html:15
+#: ckanext/permissions_manager/templates/perm_manager/organization/user_roles_list.html:3
+#: ckanext/permissions_manager/templates/perm_manager/role_list.html:4
+msgid "Roles"
+msgstr ""
+
+#: ckanext/permissions_manager/tables.py:166
+msgid "Edit roles"
+msgstr ""
+
+#: ckanext/permissions_manager/tables.py:277
+msgid "No changes match your filters."
+msgstr ""
+
+#: ckanext/permissions_manager/tables.py:282
+msgid "Date"
+msgstr ""
+
+#: ckanext/permissions_manager/tables.py:289
+msgid "Changed by"
+msgstr ""
+
+#: ckanext/permissions_manager/tables.py:290
+msgid "System"
+msgstr ""
+
+#: ckanext/permissions_manager/tables.py:296
+msgid "Action"
+msgstr ""
+
+#: ckanext/permissions_manager/tables.py:301
+msgid "Role"
+msgstr ""
+
+#: ckanext/permissions_manager/tables.py:309
+#: ckanext/permissions_manager/templates/perm_manager/list.html:62
+msgid "Permission"
+msgstr ""
+
+#: ckanext/permissions_manager/tables.py:312
+msgid "Details"
+msgstr ""
+
+#: ckanext/permissions_manager/views.py:33
+msgid "Need to be system administrator to administer"
+msgstr ""
+
+#: ckanext/permissions_manager/views.py:48
+msgid "Permissions updated"
+msgstr ""
+
+#: ckanext/permissions_manager/views.py:123
+msgid "Role has been created"
+msgstr ""
+
+#: ckanext/permissions_manager/views.py:158
+msgid "Role has been updated"
+msgstr ""
+
+#: ckanext/permissions_manager/views.py:182
+#: ckanext/permissions_manager/views.py:221
+#: ckanext/permissions_manager/views.py:245
+msgid "User not found"
+msgstr ""
+
+#: ckanext/permissions_manager/views.py:231
+msgid "User roles updated"
+msgstr ""
+
+#: ckanext/permissions_manager/views.py:260
+msgid "Role not found"
+msgstr ""
+
+#: ckanext/permissions_manager/assets/js/perm-permission-dependencies.js:78
+#, python-format
+msgid "Also granted to %(role)s: %(permissions)s"
+msgstr ""
+
+#: ckanext/permissions_manager/assets/js/perm-permission-dependencies.js:79
+#, python-format
+msgid "Also revoked from %(role)s: %(permissions)s"
+msgstr ""
+
+#: ckanext/permissions_manager/assets/js/perm-permission-matrix.js:35
+#, python-format
+msgid "%(num)d unsaved change"
+msgid_plural "%(num)d unsaved changes"
+msgstr[0] ""
+msgstr[1] ""
+
+#: ckanext/permissions_manager/assets/js/perm-tom-select.js:24
+msgid "Remove this item"
+msgstr ""
+
+#: ckanext/permissions_manager/assets/js/perm-tom-select.js:25
+msgid "Remove all selected options"
+msgstr ""
+
+#: ckanext/permissions_manager/assets/js/vendor/tomselect.min.js:276
+msgid "loading"
+msgstr ""
+
+#: ckanext/permissions_manager/assets/js/vendor/tomselect.min.js:276
+msgid "no_results"
+msgstr ""
+
+#: ckanext/permissions_manager/assets/js/vendor/tomselect.min.js:276
+msgid "not_loading"
+msgstr ""
+
+#: ckanext/permissions_manager/assets/js/vendor/tomselect.min.js:276
+msgid "option_create"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/add_role.html:6
+msgid "Create role"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/add_role.html:15
+#, python-brace-format
+msgid "Lowercase letters, \"-\" and \"_\" only, up to {max} characters."
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/add_role.html:18
+msgid "e.g. creator"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/add_role.html:20
+msgid "It can't be changed later."
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/add_role.html:24
+msgid "e.g. Creator"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/add_role.html:28
+#: ckanext/permissions_manager/templates/perm_manager/edit_role.html:26
+#: ckanext/permissions_manager/templates/perm_manager/edit_user_roles.html:34
+#: ckanext/permissions_manager/templates/perm_manager/organization/edit_user_roles.html:25
+msgid "Cancel"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/add_role.html:29
+msgid "Create"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/base.html:30
+#: ckanext/permissions_manager/templates/perm_manager/user_roles_list.html:4
+msgid "User roles"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/base.html:31
+#: ckanext/permissions_manager/templates/perm_manager/change_log.html:4
+msgid "Change log"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/change_log.html:8
+msgid "Changes made to the roles and their permissions."
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/edit_role.html:8
+msgid "Update role"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/edit_role.html:27
+#: ckanext/permissions_manager/templates/perm_manager/edit_user_roles.html:36
+#: ckanext/permissions_manager/templates/perm_manager/organization/edit_user_roles.html:27
+msgid "Update"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/edit_user_roles.html:9
+msgid "Update user roles"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/list.html:17
+msgid "Search Permissions"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/list.html:18
+msgid "Type to search..."
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/list.html:26
+msgid "Clear"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/list.html:36
+#, python-brace-format
+msgid "{count} grant of a permission that no permission group defines has no effect."
+msgid_plural "{count} grants of permissions that no permission group defines have no effect."
+msgstr[0] ""
+msgstr[1] ""
+
+#: ckanext/permissions_manager/templates/perm_manager/list.html:41
+msgid "List and remove them with"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/list.html:47
+msgid "Permissions were not saved. Fix the highlighted cells and save again:"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/list.html:94
+msgid "Requires:"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/list.html:108
+msgid "Can't be given to this role"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/list.html:110
+msgid "Not allowed"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/list.html:114
+#, python-brace-format
+msgid "Grant {permission} to {role}"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/list.html:129
+msgid "No permissions match your search."
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/list.html:138
+msgid "Discard changes"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/list.html:139
+msgid "Save"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/user_roles_list.html:8
+msgid "You can assign roles to users to control their access to the system."
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/user_roles_list.html:9
+msgid "Roles assigned here will be considered **global** roles."
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/user_roles_list.html:10
+msgid ""
+"**Anonymous** and **Authenticated** roles aren't assigned: they apply to "
+"everyone and to every logged-in user."
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/user_roles_table.html:5
+msgid "Show all portal users"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/user_roles_table.html:8
+msgid ""
+"By default, only members of this organization and users who already have a "
+"role in it are listed."
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/user_roles_table.html:13
+msgid "Only active users are listed."
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/organization/edit_user_roles.html:5
+msgid "Edit user roles"
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/organization/user_roles_list.html:6
+msgid ""
+"You can assign roles to users to control their access to this organization "
+"and its datasets."
+msgstr ""
+
+#: ckanext/permissions_manager/templates/perm_manager/organization/user_roles_list.html:7
+msgid ""
+"Roles assigned here will be considered **scoped** and specific to this "
+"organization."
+msgstr ""

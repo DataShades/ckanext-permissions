@@ -17,6 +17,7 @@ from ckanext.permissions import types as perm_types
 @tk.blanket.config_declarations
 class PermissionsPlugin(implementation.PermissionLabels, p.SingletonPlugin):
     p.implements(p.IConfigurer)
+    p.implements(p.ITranslation)
 
     _permissions_groups: ClassVar[list[perm_types.PermissionGroup]] = []
     _permissions: ClassVar[dict[str, perm_types.PermissionDefinition]] = {}
