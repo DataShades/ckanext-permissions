@@ -207,6 +207,18 @@ def permissions_update(context: Context, data_dict: DataDict) -> DataDict:
     }
 
 
+@tk.side_effect_free
+def permissions_export(context: Context, data_dict: DataDict) -> perm_types.PermissionsExport:
+    """Export the permissions of every role, to import them on another portal.
+
+    Returns:
+        The export version and the permissions granted to each role
+    """
+    tk.check_access("manage_permissions", context, data_dict)
+
+    return perm_utils.export_permissions()
+
+
 def _log_permission_changes(context: Context, updated_permissions: dict[str, dict[str, bool]]) -> None:
     labels = _Labels()
     actor_id = _actor_id(context)

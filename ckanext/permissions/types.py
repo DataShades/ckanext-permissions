@@ -36,3 +36,8 @@ class Role(TypedDict):
     id: str
     label: str
     description: str
+
+
+class PermissionsExport(TypedDict):
+    version: int
+    roles: dict[str, list[str]]

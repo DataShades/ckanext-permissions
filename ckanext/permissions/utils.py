@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+import dataclasses
 import inspect
 import logging
 import os
-from typing import cast
+from typing import Any, cast
 
 import yaml
 
@@ -256,6 +257,111 @@ def _is_registered(permission: str) -> bool:
 def get_unregistered_grants() -> list[perm_model.RolePermission]:
     """Get the role grants of permissions that no loaded permission group defines."""
     return perm_model.RolePermission.get_unregistered(list(get_permissions()))
+
+
+def export_permissions() -> perm_types.PermissionsExport:
+    """Get the permissions of every role, in the format `plan_permissions_import` reads.
+
+    Grants of permissions that no loaded group defines are left out.
+    """
+    registered = get_permissions()
+    roles = {}
+
+    for role_id in get_registered_roles():
+        granted = perm_model.RolePermission.get_for_role(role_id)
+        roles[role_id] = [permission for permission in granted if permission in registered]
+
+    return {"version": perm_const.EXPORT_VERSION, "roles": roles}
+
+
+@dataclasses.dataclass
+class PermissionsImport:
+    """Permissions to apply from an export of another portal.
+
+    Attributes:
+        permissions: The `permissions_update` payload. Every role of the export
+            that exists here gets exactly the permissions listed for it.
+        unknown_roles: Roles of the export that don't exist here
+        unknown_permissions: Permissions of the export that no loaded group defines
+        blocked: `(permission, role)` grants of the export the role can't be given
+    """
+
+    permissions: dict[str, dict[str, bool]]
+    unknown_roles: list[str]
+    unknown_permissions: list[str]
+    blocked: list[tuple[str, str]]
+
+    def get_changes(self) -> list[tuple[str, str, bool]]:
+        """Get the `(permission, role, granted)` grants that differ from the current ones."""
+        current: dict[str, set[str]] = {}
+        changes = []
+
+        for permission, roles in self.permissions.items():
+            for role_id, granted in roles.items():
+                if role_id not in current:
+                    current[role_id] = set(perm_model.RolePermission.get_for_role(role_id))
+
+                if granted != (permission in current[role_id]):
+                    changes.append((permission, role_id, granted))
+
+        return changes
+
+
+def plan_permissions_import(data: Any) -> PermissionsImport:
+    """Match an export of another portal against the roles and permissions of this one.
+
+    Args:
+        data: The output of `export_permissions`
+
+    Raises:
+        tk.ValidationError: The data isn't an export this version can read
+    """
+    _validate_export(data)
+
+    registered = get_permissions()
+    roles = get_registered_roles()
+    result = PermissionsImport({key: {} for key in registered}, [], [], [])
+    unknown_permissions: set[str] = set()
+
+    for role_id, granted in data["roles"].items():
+        unknown_permissions.update(permission for permission in granted if permission not in registered)
+
+        if role_id not in roles:
+            result.unknown_roles.append(role_id)
+            continue
+
+        for permission in registered:
+            flag = permission in granted
+
+            if flag and is_permission_blocked_for_role(permission, role_id):
+                result.blocked.append((permission, role_id))
+                flag = False
+
+            result.permissions[permission][role_id] = flag
+
+    result.unknown_permissions = sorted(unknown_permissions)
+
+    return result
+
+
+def _validate_export(data: Any) -> None:
+    if not isinstance(data, dict):
+        raise tk.ValidationError(tk._("The export must be a JSON object"))
+
+    if data.get("version") != perm_const.EXPORT_VERSION:
+        raise tk.ValidationError(
+            tk._("Unsupported export version {version}, expected {expected}").format(
+                version=data.get("version"), expected=perm_const.EXPORT_VERSION
+            )
+        )
+
+    roles = data.get("roles")
+
+    if not isinstance(roles, dict) or not all(
+        isinstance(granted, list) and all(isinstance(permission, str) for permission in granted)
+        for granted in roles.values()
+    ):
+        raise tk.ValidationError(tk._("The export must map each role to a list of permissions"))
 
 
 def _implicit_roles_have_permission(permission: str, user: model.User | model.AnonymousUser) -> bool:

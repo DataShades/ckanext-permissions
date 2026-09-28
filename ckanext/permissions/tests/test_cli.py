@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from ckan.cli.cli import ckan
@@ -33,3 +35,64 @@ class TestOrphans:
         assert not result.exit_code, result.output
         assert not perm_model.RolePermission.get(authenticated, "removed_permission")
         assert perm_model.RolePermission.get(authenticated, "perm_1")
+
+
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestExportImport:
+    def test_export(self, cli):
+        perm_model.RolePermission.create(const.Roles.Authenticated.value, "perm_1")
+
+        result = cli.invoke(ckan, ["permissions", "export"])
+
+        assert not result.exit_code, result.output
+        assert json.loads(result.output)["roles"]["authenticated"] == ["perm_1"]
+
+    def test_import(self, cli):
+        perm_model.RolePermission.create(const.Roles.Authenticated.value, "perm_2")
+        data = json.dumps({"version": 1, "roles": {"authenticated": ["perm_1"], "missing": []}})
+
+        result = cli.invoke(ckan, ["permissions", "import"], input=data)
+
+        assert not result.exit_code, result.output
+        assert "Skipped role missing" in result.output
+        assert "+ perm_1\tauthenticated" in result.output
+        assert "- perm_2\tauthenticated" in result.output
+        assert perm_model.RolePermission.get(const.Roles.Authenticated.value, "perm_1")
+        assert not perm_model.RolePermission.get(const.Roles.Authenticated.value, "perm_2")
+
+    def test_import_dry_run(self, cli):
+        data = json.dumps({"version": 1, "roles": {"authenticated": ["perm_1"]}})
+
+        result = cli.invoke(ckan, ["permissions", "import", "--dry-run"], input=data)
+
+        assert not result.exit_code, result.output
+        assert "+ perm_1\tauthenticated" in result.output
+        assert not perm_model.RolePermission.get(const.Roles.Authenticated.value, "perm_1")
+
+    def test_import_export_roundtrip_has_no_changes(self, cli):
+        perm_model.RolePermission.create(const.Roles.Authenticated.value, "perm_1")
+        exported = cli.invoke(ckan, ["permissions", "export"]).output
+
+        result = cli.invoke(ckan, ["permissions", "import"], input=exported)
+
+        assert not result.exit_code, result.output
+        assert "Permissions already match" in result.output
+
+    def test_import_reports_broken_dependencies(self, cli):
+        data = json.dumps({"version": 1, "roles": {"authenticated": ["update_any_dataset"]}})
+
+        result = cli.invoke(ckan, ["permissions", "import"], input=data)
+
+        assert result.exit_code
+        assert "can't have Update any dataset without" in result.output
+        assert not perm_model.RolePermission.get(const.Roles.Authenticated.value, "update_any_dataset")
+
+    @pytest.mark.parametrize(
+        ("data", "message"),
+        [("{", "Invalid JSON"), ('{"version": 2, "roles": {}}', "Unsupported export version")],
+    )
+    def test_import_invalid(self, cli, data, message):
+        result = cli.invoke(ckan, ["permissions", "import"], input=data)
+
+        assert result.exit_code
+        assert message in result.output

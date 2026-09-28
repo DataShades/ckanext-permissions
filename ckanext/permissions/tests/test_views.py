@@ -1,3 +1,4 @@
+import html
 import json
 import re
 
@@ -381,6 +382,18 @@ class TestPermissionMatrix:
         ).body
 
         assert re.search(r'data-search="[^"]*\bupdate_any_dataset\b', body)
+
+    def test_export_modal_has_saved_permissions(self, app, sysadmin):
+        perm_model.RolePermission.create(const.Roles.Authenticated.value, "read_any_dataset")
+
+        body = app.get(
+            tk.h.url_for("perm_manager.permission_list"), headers={"Authorization": sysadmin["token"]}, status=200
+        ).body
+
+        textarea = re.search(r'id="perm-export-modal".*?<textarea[^>]*>(.*?)</textarea>', body, re.S)
+        assert textarea
+        exported = json.loads(html.unescape(textarea.group(1)))
+        assert exported["roles"]["authenticated"] == ["read_any_dataset"]
 
 
 PAGES = [

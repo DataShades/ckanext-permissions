@@ -151,7 +151,35 @@ Your extension checks its own permissions with `ckanext.permissions.utils.check_
 ```bash
 # List role grants of permissions that no loaded permission group defines, or delete them
 ckan -c /etc/ckan/default/ckan.ini permissions orphans [--delete]
+
+# Write the permissions of every role as JSON to a file, or to stdout
+ckan -c /etc/ckan/default/ckan.ini permissions export [FILE]
+
+# Give each role in the file, or stdin, exactly the permissions listed for it
+ckan -c /etc/ckan/default/ckan.ini permissions import [FILE] [--dry-run]
 ```
+
+
+## Moving permissions between portals
+
+To copy permissions from one portal to another, for example from UAT to production, export them on the source and import them on the target. On the permissions page, **Export** shows the saved permissions as JSON to copy or download. **Import** takes that JSON and changes the switches on the page, so you can review the highlighted changes before you save them. The `permissions export` and `permissions import` commands do the same from the command line, and the `permissions_export` API action returns the export.
+
+```json
+{
+  "version": 1,
+  "roles": {
+    "authenticated": ["create_dataset"],
+    "data_steward": ["manage_dataset_collaborators", "read_any_dataset"]
+  }
+}
+```
+
+Each role in the export gets exactly the permissions listed for it: missing permissions are revoked. Roles that aren't in the export keep their permissions. The import skips and reports these entries:
+- roles that don't exist on the target; create them first on the Roles tab
+- permissions that no loaded permission group defines
+- permissions the role can't be given, such as `update_any_dataset` for `anonymous`
+
+The export contains only the permissions of each role. It doesn't include the roles' labels and descriptions, or the roles assigned to users.
 
 
 ## Tests

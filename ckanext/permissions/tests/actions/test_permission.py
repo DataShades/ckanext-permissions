@@ -171,3 +171,32 @@ class TestAnonymousRestriction:
         perm_model.RolePermission.create("anonymous", "update_any_dataset")
 
         assert not utils.check_permission("update_any_dataset", model.AnonymousUser())
+
+
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestPermissionsExport:
+    def test_export(self, test_role):
+        perm_model.RolePermission.create("authenticated", "perm_2")
+        perm_model.RolePermission.create("authenticated", "perm_1")
+        perm_model.RolePermission.create(test_role["id"], "perm_1")
+
+        result = call_action("permissions_export")
+
+        assert result == {
+            "version": 1,
+            "roles": {
+                "anonymous": [],
+                "authenticated": ["perm_1", "perm_2"],
+                "administrator": [],
+                test_role["id"]: ["perm_1"],
+            },
+        }
+
+    def test_unregistered_grants_are_left_out(self):
+        perm_model.RolePermission.create("authenticated", "removed_permission")
+
+        assert call_action("permissions_export")["roles"]["authenticated"] == []
+
+    def test_requires_sysadmin(self, user):
+        with pytest.raises(tk.NotAuthorized):
+            call_action("permissions_export", {"user": user["name"], "ignore_auth": False})

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from typing import Any
 
 from flask import Blueprint, Response
@@ -65,6 +66,8 @@ class PermissionManagerView(MethodView):
                 "error_messages": flatten_errors(errors),
                 "error_cells": self._get_error_cells(submitted or {}, errors),
                 "unregistered_grants": len(utils.get_unregistered_grants()),
+                "export_version": perm_const.EXPORT_VERSION,
+                "export": json.dumps(tk.get_action("permissions_export")({}, {}), indent=2),
             },
         )
 

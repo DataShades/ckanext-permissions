@@ -8,6 +8,7 @@ ckan.module("perm-permission-matrix", function ($) {
 
       this.checkboxes.on("change", this._update.bind(this));
       this.el.on("reset", () => setTimeout(this._update.bind(this)));
+      this.el.on("perm-matrix:refresh", this._update.bind(this));
       this.el.on("submit", () => (this.submitting = true));
       $(window).on("beforeunload", this._onBeforeUnload.bind(this));
 

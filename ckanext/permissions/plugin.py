@@ -4,6 +4,7 @@ from typing import ClassVar
 
 import ckan.plugins as p
 import ckan.plugins.toolkit as tk
+from ckan.lib.plugins import DefaultTranslation
 
 from ckanext.permissions import implementation, utils
 from ckanext.permissions import types as perm_types
@@ -15,7 +16,7 @@ from ckanext.permissions import types as perm_types
 @tk.blanket.helpers
 @tk.blanket.auth_functions
 @tk.blanket.config_declarations
-class PermissionsPlugin(implementation.PermissionLabels, p.SingletonPlugin):
+class PermissionsPlugin(implementation.PermissionLabels, DefaultTranslation, p.SingletonPlugin):
     p.implements(p.IConfigurer)
     p.implements(p.ITranslation)
 

@@ -8,6 +8,7 @@ from ckan import model
 from ckan.tests.helpers import call_action
 
 from ckanext.permissions import const, utils
+from ckanext.permissions import model as perm_model
 from ckanext.permissions.types import PermissionDefinition, PermissionGroup
 from ckanext.permissions.utils import validate_groups
 
@@ -409,3 +410,55 @@ class TestAnonymousValidation:
         assert not utils.is_permission_blocked_for_role("perm_1", anonymous)
         assert not utils.is_permission_blocked_for_role("missing", anonymous)
         assert not utils.is_permission_blocked_for_role("update_any_dataset", const.Roles.Authenticated.value)
+
+
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestPlanPermissionsImport:
+    def test_listed_roles_get_exactly_the_listed_permissions(self, test_role):
+        perm_model.RolePermission.create("authenticated", "perm_2")
+        perm_model.RolePermission.create(test_role["id"], "perm_2")
+
+        plan = utils.plan_permissions_import({"version": 1, "roles": {"authenticated": ["perm_1"]}})
+
+        assert plan.permissions["perm_1"] == {"authenticated": True}
+        assert plan.permissions["perm_2"] == {"authenticated": False}
+        assert plan.get_changes() == [("perm_1", "authenticated", True), ("perm_2", "authenticated", False)]
+
+    def test_unknown_roles_and_permissions_are_skipped(self):
+        plan = utils.plan_permissions_import(
+            {"version": 1, "roles": {"missing": ["perm_1"], "authenticated": ["perm_1", "removed_permission"]}}
+        )
+
+        assert plan.unknown_roles == ["missing"]
+        assert plan.unknown_permissions == ["removed_permission"]
+        assert all("missing" not in roles for roles in plan.permissions.values())
+        assert "removed_permission" not in plan.permissions
+
+    def test_blocked_grants_are_skipped(self):
+        plan = utils.plan_permissions_import(
+            {"version": 1, "roles": {"anonymous": ["read_any_dataset", "update_any_dataset"]}}
+        )
+
+        assert plan.blocked == [("update_any_dataset", "anonymous")]
+        assert plan.permissions["read_any_dataset"]["anonymous"] is True
+        assert plan.permissions["update_any_dataset"]["anonymous"] is False
+
+    def test_matching_permissions_have_no_changes(self):
+        perm_model.RolePermission.create("authenticated", "perm_1")
+
+        assert not utils.plan_permissions_import(utils.export_permissions()).get_changes()
+
+    @pytest.mark.parametrize(
+        ("data", "message"),
+        [
+            ([], "must be a JSON object"),
+            ({"roles": {}}, "Unsupported export version"),
+            ({"version": 2, "roles": {}}, "Unsupported export version"),
+            ({"version": 1}, "must map each role"),
+            ({"version": 1, "roles": {"authenticated": "perm_1"}}, "must map each role"),
+            ({"version": 1, "roles": {"authenticated": [1]}}, "must map each role"),
+        ],
+    )
+    def test_invalid_export(self, data, message):
+        with pytest.raises(tk.ValidationError, match=message):
+            utils.plan_permissions_import(data)

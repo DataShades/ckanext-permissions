@@ -7,6 +7,8 @@ ROLE_ID_PATTERN = r"[a-z_\-]+"
 SCOPE_GLOBAL = "global"
 SCOPE_ORGANIZATION = "organization"
 
+EXPORT_VERSION = 1
+
 
 class Roles(Enum):
     Anonymous = "anonymous"

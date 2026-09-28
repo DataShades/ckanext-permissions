@@ -26,9 +26,19 @@
                 {{ _('Clear') }}
             </button>
         </div>
+        <div class="d-flex gap-2">
+            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#perm-export-modal">
+                <i class="fa fa-file-export" aria-hidden="true"></i>
+                {{ _("Export") }}
+            </button>
+            <button type="button" class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#perm-import-modal">
+                <i class="fa fa-file-import" aria-hidden="true"></i>
+                {{ _("Import") }}
+            </button>
+        </div>
     </div>
 
-    <form action="" method="POST" data-module="perm-permission-matrix">
+    <form action="" method="POST" id="permissions-form" data-module="perm-permission-matrix">
         {{ h.csrf_input() }}
 
         {% if unregistered_grants %}
@@ -53,6 +63,7 @@
             </div>
         {% endif %}
 
+        <div class="perm-import-notice alert alert-info d-none" role="status" aria-live="polite"></div>
         <div class="perm-cascade-notice alert alert-info d-none" role="status" aria-live="polite"></div>
 
         <div class="perm-matrix">
@@ -139,4 +150,60 @@
             <button type="submit" class="btn btn-primary">{{ _("Save") }}</button>
         </div>
     </form>
+
+    <div class="modal fade" id="perm-export-modal" tabindex="-1" aria-labelledby="perm-export-title" aria-hidden="true" data-module="perm-permission-export">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="perm-export-title">{{ _("Export permissions") }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Close') }}"></button>
+                </div>
+
+                <div class="modal-body">
+                    <p>{{ _("Copy or download the saved permissions of every role, then import them on another portal. Unsaved changes aren't included.") }}</p>
+                    <textarea class="form-control font-monospace" rows="16" readonly aria-label="{{ _('Exported permissions') }}">{{ export }}</textarea>
+                </div>
+
+                <div class="modal-footer">
+                    <span class="perm-export-status text-muted me-auto" aria-live="polite"></span>
+                    <button type="button" class="btn btn-outline-primary" data-action="download">{{ _("Download") }}</button>
+                    <button type="button" class="btn btn-primary" data-action="copy">{{ _("Copy") }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div
+        class="modal fade"
+        id="perm-import-modal"
+        tabindex="-1"
+        aria-labelledby="perm-import-title"
+        aria-hidden="true"
+        data-module="perm-permission-import"
+        data-module-target="permissions-form"
+        data-module-version="{{ export_version }}"
+        data-module-roles="{{ h.dump_json(registered_roles) }}"
+        data-module-permissions="{{ h.dump_json(permissions | list) }}"
+    >
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="perm-import-title">{{ _("Import permissions") }}</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="{{ _('Close') }}"></button>
+                </div>
+
+                <div class="modal-body">
+                    <p>{{ _("Paste or upload an export from another portal. Each role in it gets exactly the permissions listed for it; other roles keep theirs. The switches change on this page, and nothing is saved until you review the changes and save them.") }}</p>
+                    <textarea class="form-control font-monospace mb-3" rows="12" aria-label="{{ _('Permissions to import') }}"></textarea>
+                    <input type="file" class="form-control" accept=".json,application/json" aria-label="{{ _('Export file') }}">
+                    <div class="perm-import-error alert alert-danger mt-3 mb-0 d-none" role="alert"></div>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">{{ _("Cancel") }}</button>
+                    <button type="button" class="btn btn-primary" data-action="apply">{{ _("Apply") }}</button>
+                </div>
+            </div>
+        </div>
+    </div>
 {% endblock %}
