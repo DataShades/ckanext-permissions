@@ -22,7 +22,16 @@ log = logging.getLogger(__name__)
 def permission_role_create(context: Context, data_dict: DataDict) -> perm_types.Role:
     tk.check_access("manage_user_roles", context, data_dict)
 
-    role = perm_model.Role.create(**data_dict)
+    role = perm_model.Role.create(**data_dict, commit=False)
+    perm_model.ChangeLog.create(
+        perm_const.ChangeAction.RoleCreated,
+        role.id,
+        actor_id=_actor_id(context),
+        data={"label": role.label, "description": role.description},
+        commit=False,
+    )
+    model.Session.commit()
+
     log.info("Role created: role=%s actor=%s", role.id, context.get("user"))
 
     return role.dictize(context)
@@ -33,6 +42,17 @@ def permission_role_delete(context: Context, data_dict: DataDict) -> None:
     tk.check_access("manage_user_roles", context, data_dict)
 
     if role := perm_model.Role.get(data_dict["id"]):
+        perm_model.ChangeLog.create(
+            perm_const.ChangeAction.RoleDeleted,
+            role.id,
+            actor_id=_actor_id(context),
+            data={
+                "label": role.label,
+                "description": role.description,
+                "permissions": perm_model.RolePermission.get_for_role(role.id),
+            },
+            commit=False,
+        )
         role.delete()
         log.info("Role deleted: role=%s actor=%s", data_dict["id"], context.get("user"))
 
@@ -44,7 +64,24 @@ def permission_role_update(context: Context, data_dict: DataDict) -> perm_types.
     role = cast(perm_model.Role, perm_model.Role.get(data_dict["id"]))
 
     old_label, old_description = role.label, role.description
-    role.update(data_dict["description"], data_dict.get("label"))
+    role.update(data_dict["description"], data_dict.get("label"), commit=False)
+
+    changes = {
+        field: [old, new]
+        for field, old, new in [("label", old_label, role.label), ("description", old_description, role.description)]
+        if old != new
+    }
+
+    if changes:
+        perm_model.ChangeLog.create(
+            perm_const.ChangeAction.RoleUpdated,
+            role.id,
+            actor_id=_actor_id(context),
+            data={"label": role.label, "changes": changes},
+            commit=False,
+        )
+
+    model.Session.commit()
 
     log.info(
         "Role updated: role=%s label=%r -> %r description=%r -> %r actor=%s",
@@ -57,6 +94,66 @@ def permission_role_update(context: Context, data_dict: DataDict) -> perm_types.
     )
 
     return role.dictize(context)
+
+
+@validate(schema.user_roles_update)
+def permission_user_roles_update(context: Context, data_dict: DataDict) -> list[str]:
+    """Replace the roles of a user in a scope.
+
+    Returns:
+        The roles the user has in the scope
+    """
+    tk.check_access("manage_user_roles", context, data_dict)
+
+    user = cast(model.User, model.User.get(data_dict["user_id"]))
+    scope = data_dict["scope"]
+    scope_data = {"scope": scope}
+    scope_id = None
+
+    if scope == perm_const.SCOPE_ORGANIZATION:
+        organization = model.Group.get(data_dict.get("scope_id") or "")
+
+        if not organization or not organization.is_organization:
+            raise tk.ValidationError({"scope_id": [tk._("Organization not found")]})
+
+        scope_id = organization.id
+        scope_data.update(organization=organization.name, organization_label=organization.display_name)
+
+    old_roles = {str(user_role.role_id) for user_role in perm_model.UserRole.get(user.id, scope, scope_id)}
+    new_roles = set(data_dict["roles"])
+
+    labels = _Labels()
+    actor_id = _actor_id(context)
+
+    for role_id in sorted(new_roles ^ old_roles):
+        if role_id in new_roles:
+            perm_model.UserRole.create(user.id, role_id, scope, scope_id, commit=False)
+        else:
+            perm_model.UserRole.delete(user.id, role_id, scope, scope_id, commit=False)
+
+        perm_model.ChangeLog.create(
+            perm_const.ChangeAction.RoleAssigned if role_id in new_roles else perm_const.ChangeAction.RoleUnassigned,
+            role_id,
+            actor_id=actor_id,
+            user_id=user.id,
+            data={"label": labels.role(role_id), "user_label": user.display_name, **scope_data},
+            commit=False,
+        )
+
+    model.Session.commit()
+
+    if old_roles != new_roles:
+        log.info(
+            "User roles updated: user=%s scope=%s scope_id=%s added=%s removed=%s actor=%s",
+            user.name,
+            scope,
+            scope_id,
+            sorted(new_roles - old_roles),
+            sorted(old_roles - new_roles),
+            context.get("user"),
+        )
+
+    return sorted(new_roles)
 
 
 @validate(schema.permissions_update)
@@ -91,6 +188,7 @@ def permissions_update(context: Context, data_dict: DataDict) -> DataDict:
         model.Session.rollback()
         raise tk.ValidationError(errors)
 
+    _log_permission_changes(context, updated_permissions)
     model.Session.commit()
 
     for permission_key, permission_data in updated_permissions.items():
@@ -107,6 +205,28 @@ def permissions_update(context: Context, data_dict: DataDict) -> DataDict:
         "updated_permissions": updated_permissions,
         "missing_permissions": missing_permissions,
     }
+
+
+def _log_permission_changes(context: Context, updated_permissions: dict[str, dict[str, bool]]) -> None:
+    labels = _Labels()
+    actor_id = _actor_id(context)
+
+    for permission_key, roles_data in updated_permissions.items():
+        for role_id, granted in roles_data.items():
+            perm_model.ChangeLog.create(
+                perm_const.ChangeAction.PermissionGranted if granted else perm_const.ChangeAction.PermissionRevoked,
+                role_id,
+                actor_id=actor_id,
+                permission=permission_key,
+                data={"label": labels.role(role_id), "permission_label": labels.permission(permission_key)},
+                commit=False,
+            )
+
+
+def _actor_id(context: Context) -> str | None:
+    user = model.User.get(context.get("user", ""))
+
+    return user.id if user else None
 
 
 def _update_role_permissions(permission_key: str, roles_data: dict[str, bool]) -> dict[str, bool]:

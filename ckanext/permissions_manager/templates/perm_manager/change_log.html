@@ -1,0 +1,23 @@
+{% extends 'perm_manager/base.html' %}
+
+{% block breadcrumb_label %}
+    {{ _("Change log") }}
+{% endblock breadcrumb_label %}
+
+{% block primary_content_inner %}
+    <p>{{ _("Changes made to the roles and their permissions.") }}</p>
+
+    {% snippet "tables/render_table.html", table=table %}
+{% endblock primary_content_inner %}
+
+{%- block styles -%}
+    {{ super() }}
+
+    {% asset "tables/tables-css" %}
+{% endblock %}
+
+{%- block scripts -%}
+    {{ super() }}
+
+    {% asset "tables/tables-js" %}
+{% endblock %}

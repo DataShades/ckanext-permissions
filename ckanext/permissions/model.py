@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timezone
+from typing import Any
 
-from sqlalchemy import Column, ForeignKey, String, case, func
+from sqlalchemy import Column, DateTime, ForeignKey, String, case, func
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, Query, backref, relationship
 from typing_extensions import Self
 
 from ckan import model, types
+from ckan.model.types import make_uuid
 from ckan.plugins import toolkit as tk
 
 import ckanext.permissions.const as perm_const
@@ -49,13 +53,14 @@ class Role(tk.BaseModel):
 
         return [role.dictize({}) for role in query]
 
-    def update(self, description: str, label: str | None = None) -> None:
+    def update(self, description: str, label: str | None = None, commit: bool = True) -> None:
         self.description = description
 
         if label is not None:
             self.label = label
 
-        model.Session.commit()
+        if commit:
+            model.Session.commit()
 
     def dictize(self, context: types.Context) -> perm_types.Role:
         return perm_types.Role(
@@ -64,9 +69,11 @@ class Role(tk.BaseModel):
             description=str(self.description),
         )
 
-    def delete(self) -> None:
+    def delete(self, commit: bool = True) -> None:
         model.Session.delete(self)
-        model.Session.commit()
+
+        if commit:
+            model.Session.commit()
 
 
 class UserRole(tk.BaseModel):
@@ -179,14 +186,23 @@ class UserRole(tk.BaseModel):
             model.Session.commit()
 
     @classmethod
-    def delete(cls, user_id: str, role: str, scope: str = perm_const.SCOPE_GLOBAL, scope_id: str | None = None) -> None:
+    def delete(
+        cls,
+        user_id: str,
+        role: str,
+        scope: str = perm_const.SCOPE_GLOBAL,
+        scope_id: str | None = None,
+        commit: bool = True,
+    ) -> None:
         query: Query = model.Session.query(cls).filter(cls.user_id == user_id, cls.role_id == role, cls.scope == scope)
 
         if scope_id:
             query = query.filter(cls.scope_id == scope_id)
 
         query.delete()
-        model.Session.commit()
+
+        if commit:
+            model.Session.commit()
 
 
 class RolePermission(tk.BaseModel):
@@ -200,6 +216,12 @@ class RolePermission(tk.BaseModel):
         query: Query = model.Session.query(cls).filter(cls.role_id == role_id, cls.permission == permission)
 
         return query.one_or_none()
+
+    @classmethod
+    def get_for_role(cls, role_id: str) -> list[str]:
+        query: Query = model.Session.query(cls.permission).filter(cls.role_id == role_id).order_by(cls.permission)
+
+        return [permission for (permission,) in query]
 
     @classmethod
     def get_unregistered(cls, registered: list[str]) -> list[Self]:
@@ -226,3 +248,49 @@ class RolePermission(tk.BaseModel):
 
         if commit:
             model.Session.commit()
+
+
+class ChangeLog(tk.BaseModel):
+    """A change made to the roles, their permissions or the roles of a user.
+
+    There are no foreign keys, and the labels are copied into ``data``, so the
+    history outlives deleted roles and unregistered permissions.
+    """
+
+    __tablename__ = "perm_change_log"
+
+    id = Column(String, primary_key=True, default=make_uuid)
+    timestamp = Column(DateTime(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc), index=True)
+    actor_id = Column(String, nullable=True)
+    action = Column(String, nullable=False)
+    role_id = Column(String, nullable=False)
+    permission = Column(String, nullable=True)
+    user_id = Column(String, nullable=True)
+    data = Column(JSONB, nullable=False, default=dict)
+
+    @classmethod
+    def create(  # noqa: PLR0913, PLR0917
+        cls,
+        action: perm_const.ChangeAction,
+        role_id: str,
+        actor_id: str | None = None,
+        permission: str | None = None,
+        user_id: str | None = None,
+        data: dict[str, Any] | None = None,
+        commit: bool = True,
+    ) -> Self:
+        entry = cls(
+            action=action.value,
+            role_id=role_id,
+            actor_id=actor_id,
+            permission=permission,
+            user_id=user_id,
+            data=data or {},
+        )
+
+        model.Session.add(entry)
+
+        if commit:
+            model.Session.commit()
+
+        return entry

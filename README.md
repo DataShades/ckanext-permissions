@@ -158,9 +158,6 @@ ckan -c /etc/ckan/default/ckan.ini permissions init-default-roles
 # Create the default roles, then give ROLE (default: authenticated) to every active user
 ckan -c /etc/ckan/default/ckan.ini permissions assign-default-user-roles [ROLE]
 
-# Remove the global ROLE (default: authenticated) from the given users, or from all users
-ckan -c /etc/ckan/default/ckan.ini permissions remove-role-from-users [ROLE] [-u USER_ID ...]
-
 # List role grants of permissions that no loaded permission group defines, or delete them
 ckan -c /etc/ckan/default/ckan.ini permissions orphans [--delete]
 ```

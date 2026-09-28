@@ -3,6 +3,8 @@ from __future__ import annotations
 from ckan import types
 from ckan.logic.schema import validator_args
 
+from ckanext.permissions import const as perm_const
+
 
 @validator_args
 def role_create(
@@ -43,6 +45,30 @@ def role_update(
         "id": [not_empty, unicode_safe, permission_role_exists],
         "label": [ignore_missing, not_empty, unicode_safe],
         "description": [not_empty, unicode_safe],
+    }
+
+
+@validator_args
+def user_roles_update(
+    not_empty: types.Validator,
+    not_missing: types.Validator,
+    ignore_missing: types.Validator,
+    unicode_safe: types.Validator,
+    user_id_or_name_exists: types.Validator,
+    list_of_strings: types.Validator,
+    roles_exists: types.Validator,
+    default: types.ValidatorFactory,
+    one_of: types.ValidatorFactory,
+) -> types.Schema:
+    return {
+        "user_id": [not_empty, unicode_safe, user_id_or_name_exists],
+        "roles": [not_missing, list_of_strings, roles_exists],
+        "scope": [
+            default(perm_const.SCOPE_GLOBAL),
+            unicode_safe,
+            one_of([perm_const.SCOPE_GLOBAL, perm_const.SCOPE_ORGANIZATION]),
+        ],
+        "scope_id": [ignore_missing, unicode_safe],
     }
 
 

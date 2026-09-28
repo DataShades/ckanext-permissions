@@ -385,56 +385,6 @@ class TestAssignRoleToUser:
             assert [role.role_id for role in org_roles] == [admin]
 
 
-@pytest.mark.usefixtures("with_plugins", "clean_db")
-class TestRemoveRoleFromUser:
-    def test_remove_role_from_user(self, user_factory):
-        """Test removing a role from a user."""
-        from ckanext.permissions import model as perm_model
-
-        user = user_factory()
-
-        utils.assign_role_to_user(user["id"], const.Roles.Administrator.value)
-        utils.remove_role_from_user(user["id"], const.Roles.Administrator.value)
-
-        user_roles = perm_model.UserRole.get(user["id"])
-        role_ids = [role.role_id for role in user_roles]
-        assert const.Roles.Administrator.value not in role_ids
-
-    def test_remove_role_doesnt_affect_other_roles(self, user_factory, test_role):
-        """Test that removing one role doesn't affect other roles."""
-        from ckanext.permissions import model as perm_model
-
-        user = user_factory()
-
-        utils.assign_role_to_user(user["id"], const.Roles.Administrator.value)
-        utils.assign_role_to_user(user["id"], test_role["id"])
-
-        utils.remove_role_from_user(user["id"], const.Roles.Administrator.value)
-
-        user_roles = perm_model.UserRole.get(user["id"])
-        role_ids = [role.role_id for role in user_roles]
-        assert const.Roles.Administrator.value not in role_ids
-        assert const.Roles.Authenticated.value in role_ids
-        assert test_role["id"] in role_ids
-
-    def test_remove_role_keeps_other_scopes(self, user_factory, organization_factory):
-        from ckanext.permissions import model as perm_model
-
-        user = user_factory()
-        org = organization_factory()
-        admin = const.Roles.Administrator.value
-
-        utils.assign_role_to_user(user["id"], admin)
-        utils.assign_role_to_user(user["id"], admin, const.SCOPE_ORGANIZATION, org["id"])
-
-        utils.remove_role_from_user(user["id"], admin)
-
-        org_roles = perm_model.UserRole.get(user["id"], const.SCOPE_ORGANIZATION, org["id"])
-
-        assert admin not in [role.role_id for role in perm_model.UserRole.get(user["id"])]
-        assert [role.role_id for role in org_roles] == [admin]
-
-
 @pytest.mark.usefixtures("with_plugins")
 class TestAnonymousValidation:
     def test_allowed_permission_depends_on_blocked_one(self):

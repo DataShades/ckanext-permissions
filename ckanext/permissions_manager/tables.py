@@ -4,6 +4,7 @@ from typing import Any
 
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import aggregate_order_by
+from sqlalchemy.orm import aliased
 
 import ckan.plugins.toolkit as tk
 from ckan import model
@@ -234,3 +235,81 @@ class OrganizationUserRolesTable(UserRolesTable):
 
     def edit_url(self, user_id: str) -> str:
         return tk.url_for("perm_manager.organization_edit_user_role", org_id=self.group_dict["name"], user_id=user_id)
+
+
+class ChangeLogTable(t.TableDefinition):
+    def __init__(self) -> None:
+        log = perm_model.ChangeLog
+        actor = aliased(model.User)
+        user = aliased(model.User)
+
+        def _display_name(user: Any) -> Any:
+            return sa.case((sa.func.trim(user.fullname) != "", user.fullname), else_=user.name)
+
+        stmt = (
+            sa.select(
+                log.id,
+                log.timestamp,
+                sa.func.coalesce(_display_name(actor), log.actor_id).label("actor"),
+                actor.name.label("actor_name"),
+                log.action,
+                log.role_id,
+                sa.func.coalesce(log.data["label"].astext, log.role_id).label("role"),
+                sa.func.coalesce(_display_name(user), log.data["user_label"].astext, log.user_id).label("user"),
+                user.name.label("user_name"),
+                sa.func.coalesce(log.data["permission_label"].astext, log.permission).label("permission"),
+                log.data,
+            )
+            .outerjoin(actor, actor.id == log.actor_id)
+            .outerjoin(user, user.id == log.user_id)
+            .order_by(log.timestamp.desc())
+        )
+
+        super().__init__(
+            name="perm_change_log",
+            table_template="perm_manager/change_log.html",
+            data_source=t.DatabaseDataSource(stmt=stmt),
+            placeholder=tk._("No changes match your filters."),
+            page_size=25,
+            columns=[
+                t.ColumnDefinition(
+                    field="timestamp",
+                    title=tk._("Date"),
+                    formatters=[(t.formatters.DateFormatter, {})],
+                    filterable=False,
+                    width=160,
+                ),
+                t.ColumnDefinition(
+                    field="actor",
+                    title=tk._("Changed by"),
+                    formatters=[(pf.ChangeUserFormatter, {"name_field": "actor_name", "empty": tk._("System")})],
+                    tabulator_formatter="html",
+                    width=180,
+                ),
+                t.ColumnDefinition(
+                    field="action",
+                    title=tk._("Action"),
+                    formatters=[(pf.ChangeActionFormatter, {})],
+                    tabulator_formatter="html",
+                    width=170,
+                ),
+                t.ColumnDefinition(field="role", title=tk._("Role"), width=160),
+                t.ColumnDefinition(
+                    field="user",
+                    title=tk._("User"),
+                    formatters=[(pf.ChangeUserFormatter, {"name_field": "user_name"})],
+                    tabulator_formatter="html",
+                    width=180,
+                ),
+                t.ColumnDefinition(field="permission", title=tk._("Permission"), width=200),
+                t.ColumnDefinition(
+                    field="details",
+                    title=tk._("Details"),
+                    formatters=[(pf.ChangeDetailsFormatter, {})],
+                    tabulator_formatter="html",
+                    sortable=False,
+                    filterable=False,
+                    min_width=250,
+                ),
+            ],
+        )

@@ -351,20 +351,6 @@ def assign_role_to_user(user_id: str, role_id: str, scope: str = perm_const.SCOP
     perm_model.UserRole.create(user_id, role_id, scope, scope_id)
 
 
-def remove_role_from_user(
-    user_id: str, role_id: str, scope: str = perm_const.SCOPE_GLOBAL, scope_id: str | None = None
-):
-    """Remove role from an User.
-
-    Args:
-        role_id: The role to remove
-        user_id: The user to remove the role from
-        scope: The scope of the role
-        scope_id: The scope ID of the role
-    """
-    perm_model.UserRole.delete(user_id, role_id, scope, scope_id)
-
-
 def ensure_default_roles() -> int:
     """Ensure default roles exist in the database.
 

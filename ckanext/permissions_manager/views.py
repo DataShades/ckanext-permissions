@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from typing import Any
 
 from flask import Blueprint, Response
@@ -16,13 +15,13 @@ from ckanext.permissions import const as perm_const
 from ckanext.permissions import model as perm_model
 from ckanext.permissions import utils
 from ckanext.permissions_manager.tables import (
+    ChangeLogTable,
     OrganizationUserRolesTable,
     RolesTable,
     UserRolesTable,
     flatten_errors,
 )
 
-log = logging.getLogger(__name__)
 perm_manager = Blueprint("perm_manager", __name__, url_prefix="/permissions")
 
 
@@ -176,11 +175,6 @@ class OrganizationUserRolesList(TableDispatchMixin, MethodView):
 
 
 class EditUserRole(MethodView):
-    def __init__(self):
-        self.schema = {
-            "roles": [tk.get_validator(validator) for validator in ["not_missing", "list_of_strings", "roles_exists"]]
-        }
-
     def get(self, user_id: str) -> str | Response:
         user = model.User.get(user_id)
 
@@ -226,32 +220,13 @@ class EditUserRole(MethodView):
         if not user:
             tk.abort(404, tk._("User not found"))
 
-        data, errors = tk.navl_validate(payload, self.schema)
-
-        if errors:
-            return self._render_form(user, payload, errors, group_dict)
-
-        old_roles = set(tk.h.get_user_roles(user.id, scope, scope_id))
-
-        perm_model.UserRole.clear_user_roles(user.id, scope, scope_id, commit=False)
-
-        for role in data["roles"]:
-            perm_model.UserRole.create(user_id=user.id, role=role, scope=scope, scope_id=scope_id, commit=False)
-
-        model.Session.commit()
-
-        new_roles = set(data["roles"])
-
-        if old_roles != new_roles:
-            log.info(
-                "User roles updated: user=%s scope=%s scope_id=%s added=%s removed=%s actor=%s",
-                user.name,
-                scope,
-                scope_id,
-                sorted(new_roles - old_roles),
-                sorted(old_roles - new_roles),
-                tk.current_user.name,
+        try:
+            tk.get_action("permission_user_roles_update")(
+                {},
+                {"user_id": user.id, "scope": scope, "scope_id": scope_id, **payload},
             )
+        except tk.ValidationError as e:
+            return self._render_form(user, payload, e.error_dict, group_dict)
 
         tk.h.flash_success(tk._("User roles updated"))
 
@@ -317,5 +292,7 @@ perm_manager.add_url_rule(
     view_func=GenericTableView.as_view("user_roles_list", table=UserRolesTable),
 )
 perm_manager.add_url_rule("/user-roles/<user_id>", view_func=EditUserRole.as_view("edit_user_role"))
+
+perm_manager.add_url_rule("/changes", view_func=GenericTableView.as_view("change_log", table=ChangeLogTable))
 
 blueprints = [perm_manager]

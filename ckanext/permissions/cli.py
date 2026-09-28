@@ -57,27 +57,6 @@ def assign_default_user_roles(role: str):
 
 
 @permissions.command()
-@click.argument("role", default=perm_const.Roles.Authenticated.value, required=False)
-@click.option(
-    "--user-ids",
-    "-u",
-    multiple=True,
-    help="User IDs to remove role from (if not specified, removes from all users)",
-)
-def remove_role_from_users(role: str, user_ids: tuple[str, ...]):
-    """Remove automatic roles from users."""
-    users = model.Session.query(model.User).filter(model.User.id.in_(user_ids)).all() if user_ids else model.User.all()
-
-    for user in users:
-        utils.remove_role_from_user(user.id, role)
-
-    if user_ids:
-        click.secho(f"Role '{role}' removed from {len(users)} specified user(s)", fg="green")
-    else:
-        click.secho(f"Role '{role}' removed from all users", fg="green")
-
-
-@permissions.command()
 @click.option("--delete", is_flag=True, help="Delete the listed grants")
 def orphans(delete: bool):
     """List role grants of permissions that no loaded permission group defines.

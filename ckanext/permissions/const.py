@@ -12,3 +12,13 @@ class Roles(Enum):
     Anonymous = "anonymous"
     Authenticated = "authenticated"
     Administrator = "administrator"
+
+
+class ChangeAction(Enum):
+    RoleCreated = "role_created"
+    RoleUpdated = "role_updated"
+    RoleDeleted = "role_deleted"
+    PermissionGranted = "permission_granted"
+    PermissionRevoked = "permission_revoked"
+    RoleAssigned = "role_assigned"
+    RoleUnassigned = "role_unassigned"

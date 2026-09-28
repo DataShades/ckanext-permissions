@@ -100,7 +100,7 @@ class TestAuditLog:
     def test_user_roles_update_is_logged(self, app, sysadmin, user, caplog):
         url = tk.h.url_for("perm_manager.edit_user_role", user_id=user["id"])
 
-        with caplog.at_level(logging.INFO, logger="ckanext.permissions_manager.views"):
+        with caplog.at_level(logging.INFO, logger="ckanext.permissions.logic.action"):
             app.post(
                 url,
                 data={"roles": [const.Roles.Administrator.value]},
@@ -276,6 +276,61 @@ class TestRolesList:
 
 @pytest.mark.ckan_config("ckan.plugins", "permissions permissions_manager tables")
 @pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestChangeLog:
+    def test_lists_changes_of_deleted_role(self, app, sysadmin, test_role):
+        context = {"user": sysadmin["name"]}
+        tk.get_action("permissions_update")(context, {"permissions": {"perm_1": {test_role["id"]: True}}})
+        tk.get_action("permission_role_delete")(context, {"id": test_role["id"]})
+
+        rows = list(_table_rows(app, sysadmin, tk.h.url_for("perm_manager.change_log")).values())
+        deleted, granted = rows[0], rows[1]
+
+        assert "Role deleted" in deleted["action"]
+        assert deleted["role"] == test_role["label"]
+        assert "Permissions: Permission 1" in deleted["details"]
+        assert sysadmin["name"] in granted["actor"]
+        assert "Permission granted" in granted["action"]
+        assert granted["permission"] == "Permission 1"
+
+    def test_role_update_shows_old_and_new_values(self, app, sysadmin, test_role):
+        tk.get_action("permission_role_update")(
+            {"user": sysadmin["name"]}, {"id": test_role["id"], "label": "Renamed", "description": "Updated"}
+        )
+
+        url = tk.h.url_for("perm_manager.change_log")
+        [updated] = _table_rows(app, sysadmin, url, _like("action", "updated")).values()
+
+        assert updated["role"] == "Renamed"
+        assert f"<del>{test_role['label']}</del> &rarr; Renamed" in updated["details"]
+
+    def test_user_role_changes_are_listed(self, app, sysadmin, user, organization):
+        url = tk.h.url_for("perm_manager.organization_edit_user_role", org_id=organization["id"], user_id=user["id"])
+        app.post(
+            url,
+            data={"roles": [const.Roles.Administrator.value]},
+            headers={"Authorization": sysadmin["token"]},
+            follow_redirects=False,
+            status=302,
+        )
+
+        [assigned] = _table_rows(app, sysadmin, tk.h.url_for("perm_manager.change_log")).values()
+
+        assert "Role assigned" in assigned["action"]
+        assert assigned["role"] == "Administrator"
+        assert f'href="{tk.h.url_for("user.read", id=user["name"])}"' in assigned["user"]
+        assert sysadmin["name"] in assigned["actor"]
+        assert f"Organization: {organization['title']}" in assigned["details"]
+
+    def test_change_without_user_is_shown_as_system(self, app, sysadmin):
+        perm_model.ChangeLog.create(const.ChangeAction.RoleCreated, "editor")
+
+        [created] = _table_rows(app, sysadmin, tk.h.url_for("perm_manager.change_log")).values()
+
+        assert created["actor"] == "System"
+
+
+@pytest.mark.ckan_config("ckan.plugins", "permissions permissions_manager tables")
+@pytest.mark.usefixtures("with_plugins", "clean_db")
 class TestPermissionMatrix:
     def test_blocked_cell_has_no_toggle(self, app, sysadmin):
         body = app.get(
@@ -341,6 +396,7 @@ PAGES = [
     ("perm_manager.edit_user_role", {"user_id": "{user}"}),
     ("perm_manager.organization_user_roles_list", {"org_id": "{org}"}),
     ("perm_manager.organization_edit_user_role", {"org_id": "{org}", "user_id": "{user}"}),
+    ("perm_manager.change_log", {}),
 ]
 
 FORM_PAGES = [
