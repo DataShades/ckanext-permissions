@@ -1,7 +1,9 @@
 import json
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
+from ckan import model
 from ckan.cli.cli import ckan
 
 from ckanext.permissions import const
@@ -96,3 +98,54 @@ class TestExportImport:
 
         assert result.exit_code
         assert message in result.output
+
+
+def _log_entry(days_ago: int) -> str:
+    entry = perm_model.ChangeLog.create(const.ChangeAction.RoleCreated, "editor", commit=False)
+    entry.timestamp = datetime.now(timezone.utc) - timedelta(days=days_ago)
+    model.Session.commit()
+
+    return entry.id
+
+
+def _log_ids() -> set[str]:
+    return {entry.id for entry in model.Session.query(perm_model.ChangeLog)}
+
+
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestPruneChanges:
+    def test_deletes_only_old_entries(self, cli):
+        _log_entry(400)
+        recent = _log_entry(10)
+
+        result = cli.invoke(ckan, ["permissions", "changes", "prune", "--older-than", "365"])
+
+        assert not result.exit_code, result.output
+        assert "1 entry(ies) deleted" in result.output
+        assert _log_ids() == {recent}
+
+    def test_dry_run_keeps_entries(self, cli):
+        old = _log_entry(400)
+
+        result = cli.invoke(ckan, ["permissions", "changes", "prune", "--older-than", "365", "--dry-run"])
+
+        assert not result.exit_code, result.output
+        assert "1 entry(ies) older than 365 day(s)" in result.output
+        assert _log_ids() == {old}
+
+    def test_nothing_to_prune(self, cli):
+        _log_entry(10)
+
+        result = cli.invoke(ckan, ["permissions", "changes", "prune", "--older-than", "365"])
+
+        assert not result.exit_code, result.output
+        assert "No change log entries older than 365 day(s)" in result.output
+
+    @pytest.mark.parametrize("args", [[], ["--older-than", "0"]])
+    def test_requires_positive_age(self, cli, args):
+        entry = _log_entry(400)
+
+        result = cli.invoke(ckan, ["permissions", "changes", "prune", *args])
+
+        assert result.exit_code
+        assert _log_ids() == {entry}

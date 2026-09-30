@@ -1,5 +1,6 @@
 import json
 import logging
+from datetime import datetime, timedelta, timezone
 from typing import IO
 
 import click
@@ -7,6 +8,7 @@ import click
 import ckan.plugins.toolkit as tk
 from ckan import model
 
+from ckanext.permissions import model as perm_model
 from ckanext.permissions import utils
 
 __all__ = ["permissions"]
@@ -105,6 +107,37 @@ def import_permissions(source: IO[str], dry_run: bool):
         raise click.ClickException(_format_errors(e)) from e
 
     click.secho(f"{len(changes)} change(s) saved", fg="green")
+
+
+@permissions.group()
+def changes():
+    """Change log commands."""
+
+
+@changes.command()
+@click.option(
+    "--older-than", "days", type=click.IntRange(min=1), required=True, help="Delete entries older than this many days"
+)
+@click.option("--dry-run", is_flag=True, help="Count the entries without deleting them")
+def prune(days: int, dry_run: bool):
+    """Delete change log entries older than the given number of days."""
+    cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+    entries = perm_model.ChangeLog.older_than(cutoff)
+    count = entries.count()
+
+    if not count:
+        click.secho(f"No change log entries older than {days} day(s)", fg="green")
+        return
+
+    if dry_run:
+        click.secho(f"{count} entry(ies) older than {days} day(s), run without --dry-run to delete them", fg="yellow")
+        return
+
+    entries.delete(synchronize_session=False)
+    model.Session.commit()
+
+    log.info("Change log pruned: before=%s deleted=%s actor=cli", cutoff.isoformat(), count)
+    click.secho(f"{count} entry(ies) deleted", fg="green")
 
 
 def _format_errors(error: tk.ValidationError) -> str:

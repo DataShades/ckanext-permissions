@@ -217,6 +217,9 @@ ckan -c /etc/ckan/default/ckan.ini permissions export [FILE]
 
 # Give each role in the file, or stdin, exactly the permissions listed for it
 ckan -c /etc/ckan/default/ckan.ini permissions import [FILE] [--dry-run]
+
+# Delete change log entries older than the given number of days
+ckan -c /etc/ckan/default/ckan.ini permissions changes prune --older-than DAYS [--dry-run]
 ```
 
 

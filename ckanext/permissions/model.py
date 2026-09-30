@@ -300,3 +300,7 @@ class ChangeLog(tk.BaseModel):
             model.Session.commit()
 
         return entry
+
+    @classmethod
+    def older_than(cls, cutoff: datetime) -> Query:
+        return model.Session.query(cls).filter(cls.timestamp < cutoff)
