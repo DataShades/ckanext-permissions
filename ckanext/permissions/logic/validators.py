@@ -145,7 +145,7 @@ def owner_org_validator(
     if organization and organization.is_organization and not context.get("ignore_auth"):
         user = model.User.get(context.get("user")) or model.AnonymousUser()
 
-        if perm_utils.check_organization_permission("create_dataset", user, organization.id):
+        if perm_utils.check_permission("create_dataset", user, perm_const.SCOPE_ORGANIZATION, organization.id):
             context = types.Context(context, ignore_auth=True)
 
     return core_validators.owner_org_validator(key, data, errors, context)

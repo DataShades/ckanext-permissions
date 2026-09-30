@@ -259,7 +259,7 @@ class TestCheckPermission:
 
         assert not utils.check_permission("removed_permission", user)
         assert not utils.check_permission("removed_permission", model.AnonymousUser())
-        assert not utils.check_organization_permission("removed_permission", user, org["id"])
+        assert not utils.check_permission("removed_permission", user, const.SCOPE_ORGANIZATION, org["id"])
         assert not utils.get_permission_scope_ids(["removed_permission"], user, const.SCOPE_ORGANIZATION)
 
     def test_get_unregistered_grants(self, test_role):
@@ -282,8 +282,7 @@ class TestCheckPermission:
         )
 
         assert utils.check_permission("perm_1", user)
-        assert not utils.check_permission("perm_1", user, const.SCOPE_ORGANIZATION, org["id"])
-        assert utils.check_organization_permission("perm_1", user, org["id"])
+        assert utils.check_permission("perm_1", user, const.SCOPE_ORGANIZATION, org["id"])
 
     def test_authenticated_grant_applies_to_every_logged_in_user(self, user_factory, organization_factory):
         user = cast(model.User, model.User.get(user_factory()["id"]))
@@ -293,8 +292,7 @@ class TestCheckPermission:
 
         assert utils.check_permission("perm_1", user)
         assert not utils.check_permission("perm_1", model.AnonymousUser())
-        assert not utils.check_permission("perm_1", user, const.SCOPE_ORGANIZATION, org["id"])
-        assert utils.check_organization_permission("perm_1", user, org["id"])
+        assert utils.check_permission("perm_1", user, const.SCOPE_ORGANIZATION, org["id"])
 
     def test_scoped_role(self, user_factory, test_role, organization_factory):
         from ckanext.permissions import model as perm_model
@@ -312,7 +310,21 @@ class TestCheckPermission:
         assert utils.check_permission("perm_1", user, const.SCOPE_ORGANIZATION, org["id"])
         assert not utils.check_permission("perm_1", user, const.SCOPE_ORGANIZATION, other_org["id"])
         assert not utils.check_permission("perm_1", user, "org", org["id"])
+        assert not utils.check_permission("perm_1", user, const.SCOPE_ORGANIZATION, None)
+        assert not utils.check_permission("perm_1", user, None, org["id"])
         assert not utils.check_permission("perm_1", user)
+
+    def test_scoped_check_includes_global_role(self, user_factory, test_role, organization_factory):
+        from ckanext.permissions import model as perm_model
+
+        user = cast(model.User, model.User.get(user_factory()["id"]))
+        org = organization_factory()
+
+        call_action("permissions_update", permissions={"perm_1": {test_role["id"]: True}})
+        perm_model.UserRole.create(user.id, test_role["id"])
+
+        assert utils.check_permission("perm_1", user, const.SCOPE_ORGANIZATION, org["id"])
+        assert utils.check_permission("perm_1", user, const.SCOPE_ORGANIZATION, None)
 
 
 @pytest.mark.usefixtures("with_plugins", "clean_db")

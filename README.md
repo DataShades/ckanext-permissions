@@ -143,7 +143,67 @@ Set `anonymous: false` on permissions that must never reach visitors who aren't 
 
 Use `depends_on` only when a permission can't work without another one, not to express that one permission is broader than another. List direct requirements only; they're followed in a chain, so `delete_any_resource` requires `update_any_dataset`, which in turn requires `read_any_dataset`.
 
-Your extension checks its own permissions with `ckanext.permissions.utils.check_permission(key, user)`, or `check_package_permission(key, user, package)` to include roles scoped to the dataset's organization.
+### Checking permissions in your extension
+
+Once your group is loaded, check its permissions with `ckanext.permissions.utils.check_permission`:
+
+```python
+check_permission(key, user)  # global roles only
+check_permission(key, user, scope, scope_id)  # global roles, or roles assigned in that scope
+```
+
+It returns `True` if one of those roles has the permission. `user` is a `model.User` or `model.AnonymousUser` object, not a name or ID. The grants of the implicit `anonymous` and `authenticated` roles count as global. Roles can currently be assigned only in the organization scope, so `scope` is `ckanext.permissions.const.SCOPE_ORGANIZATION` and `scope_id` an organization ID. Without `scope` or `scope_id`, for example for a dataset without an organization, only global roles are checked.
+
+Pass the scope whenever the object belongs to an organization. Without it, roles scoped to organizations are ignored, so a user who has the permission only in the dataset's organization would be refused. For a dataset, pass its `owner_org`.
+
+The usual place for the check is an auth function. This one decides who can approve a dataset:
+
+```python
+import ckan.plugins as p
+import ckan.plugins.toolkit as tk
+from ckan import model, types
+
+import ckanext.permissions.const as perm_const
+import ckanext.permissions.utils as perm_utils
+
+
+def approve_dataset(context: types.Context, data_dict: types.DataDict) -> types.AuthResult:
+    user = model.User.get(context.get("user")) or model.AnonymousUser()
+    package = model.Package.get(data_dict.get("id"))
+    owner_org = package.owner_org if package else None
+
+    return {"success": perm_utils.check_permission("approve_dataset", user, perm_const.SCOPE_ORGANIZATION, owner_org)}
+
+
+class MyExtPlugin(p.SingletonPlugin):
+    p.implements(p.IAuthFunctions)
+
+    def get_auth_functions(self):
+        return {"approve_dataset": approve_dataset}
+```
+
+Your action then calls `tk.check_access("approve_dataset", context, data_dict)`, and templates call `h.check_access("approve_dataset", {"id": pkg.id})` to decide whether to show the button. The extension doesn't provide a template helper that checks a permission directly.
+
+To give a permission extra access to a core action rather than a new one, chain the core auth function and fall back to it when the check fails:
+
+```python
+@tk.auth_allow_anonymous_access
+@tk.chained_auth_function
+def package_update(next_, context, data_dict):
+    user = model.User.get(context.get("user")) or model.AnonymousUser()
+    package = model.Package.get(data_dict.get("id"))
+    owner_org = package.owner_org if package else None
+
+    if perm_utils.check_permission("review_dataset", user, perm_const.SCOPE_ORGANIZATION, owner_org):
+        return {"success": True}
+
+    return next_(context, data_dict)
+```
+
+For a permission that doesn't belong to an organization, such as creating something site-wide, leave out the scope.
+
+> [!WARNING]
+> A key that no loaded group defines is never granted: the check returns `False` without an error. A typo in the key, or a group file missing from `ckanext.permissions.permission_groups`, looks like the user lacks the permission.
 
 
 ## CLI

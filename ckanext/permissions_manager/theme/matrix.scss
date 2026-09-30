@@ -14,7 +14,7 @@ $cell-bg: var(--bs-body-bg, #fff);
                 position: sticky;
                 top: 0;
                 z-index: 2;
-                background-color: $cell-bg;
+                background-color: var(--bs-table-bg);
             }
         }
 
@@ -24,7 +24,6 @@ $cell-bg: var(--bs-body-bg, #fff);
             left: 0;
             z-index: 1;
             min-width: 18rem;
-            background-color: $cell-bg;
         }
 
         thead th.perm-matrix-name {

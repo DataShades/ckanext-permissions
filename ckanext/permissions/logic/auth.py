@@ -49,7 +49,13 @@ def _check_package_permission(permission: str, context: types.Context, package: 
     if permission in _get_suppressed(context):
         return False
 
-    return perm_utils.check_package_permission(permission, _get_user(context), package)
+    return _check_organization_permission(permission, _get_user(context), package.owner_org if package else None)
+
+
+def _check_organization_permission(
+    permission: str, user: model.User | model.AnonymousUser, organization_id: str | None
+) -> bool:
+    return perm_utils.check_permission(permission, user, perm_const.SCOPE_ORGANIZATION, organization_id)
 
 
 def _get_package(data_dict: types.DataDict | None) -> model.Package | None:
@@ -80,7 +86,7 @@ def _get_organization_id(organization_id: str | None) -> str | None:
 def _can_manage_organization_member(
     user: model.User | model.AnonymousUser, organization: model.Group, data_dict: types.DataDict
 ) -> bool:
-    if not perm_utils.check_organization_permission("manage_organization_members", user, organization.id):
+    if not _check_organization_permission("manage_organization_members", user, organization.id):
         return False
 
     target_name = data_dict.get("object") or data_dict.get("username")
@@ -107,7 +113,7 @@ def package_create(
     owner_org = (data_dict or {}).get("owner_org")
 
     if owner_org:
-        allowed = perm_utils.check_organization_permission("create_dataset", user, _get_organization_id(owner_org))
+        allowed = _check_organization_permission("create_dataset", user, _get_organization_id(owner_org))
     else:
         allowed = perm_utils.check_permission("create_dataset", user) or bool(
             perm_utils.get_permission_scope_ids(["create_dataset"], user, perm_const.SCOPE_ORGANIZATION)
@@ -141,7 +147,7 @@ def package_show(
         if condition is not None and not condition():
             continue
 
-        if perm_utils.check_package_permission(permission, user, package):
+        if _check_organization_permission(permission, user, package.owner_org):
             return {"success": True}
 
     return next_(context, data_dict or {})
@@ -181,7 +187,7 @@ def resource_delete(
 def dataset_purge(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
-    if perm_utils.check_package_permission("purge_dataset", _get_user(context), _get_package(data_dict)):
+    if _check_package_permission("purge_dataset", context, _get_package(data_dict)):
         return {"success": True}
 
     return next_(context, data_dict or {})
@@ -190,7 +196,7 @@ def dataset_purge(
 def _manage_collaborators(
     next_: types.AuthFunction, context: types.Context, data_dict: types.DataDict | None
 ) -> types.AuthResult:
-    if perm_utils.check_package_permission("manage_dataset_collaborators", _get_user(context), _get_package(data_dict)):
+    if _check_package_permission("manage_dataset_collaborators", context, _get_package(data_dict)):
         return {"success": True}
 
     return next_(context, data_dict or {})
@@ -229,7 +235,7 @@ def _bulk_update(
 ) -> types.AuthResult:
     organization_id = _get_organization_id((data_dict or {}).get("org_id"))
 
-    if perm_utils.check_organization_permission("bulk_update_datasets", _get_user(context), organization_id):
+    if _check_organization_permission("bulk_update_datasets", _get_user(context), organization_id):
         return {"success": True}
 
     return next_(context, data_dict or {})
@@ -322,7 +328,7 @@ def group_edit_permissions(
     if _can_manage_group(user, group) or (
         group
         and group.is_organization
-        and perm_utils.check_organization_permission("manage_organization_members", user, group.id)
+        and _check_organization_permission("manage_organization_members", user, group.id)
     ):
         return {"success": True}
 

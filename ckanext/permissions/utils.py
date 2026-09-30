@@ -204,20 +204,21 @@ def get_registered_roles() -> dict[str, str]:
 def check_permission(
     permission: str,
     user: model.User | model.AnonymousUser,
-    scope: str = perm_const.SCOPE_GLOBAL,
+    scope: str | None = None,
     scope_id: str | None = None,
 ) -> bool:
-    """Check if user has the given permission through any of their roles.
+    """Check if user has the given permission globally or through a role in the scope.
 
-    The implicit roles aren't assigned: the global grants of the anonymous role
-    apply to every user, logged in or not, and those of the authenticated role
-    to every logged-in user.
+    The implicit roles aren't assigned: the grants of the anonymous role apply
+    to every user, logged in or not, and those of the authenticated role to
+    every logged-in user. Both count as global.
 
     Args:
         permission: The permission key to check
         user: The user to check permissions for
-        scope: The scope of the role
-        scope_id: The scope ID of the role, e.g. an organization ID
+        scope: The scope of the roles, e.g. organization. Without it, or
+            without scope_id, only global roles are checked
+        scope_id: The scope ID, e.g. an organization ID
 
     Returns:
         bool: True if user has the permission, False otherwise
@@ -225,13 +226,16 @@ def check_permission(
     if not _is_registered(permission):
         return False
 
-    if scope == perm_const.SCOPE_GLOBAL and _implicit_roles_have_permission(permission, user):
+    if _implicit_roles_have_permission(permission, user):
         return True
 
     if isinstance(user, model.AnonymousUser):
         return False
 
-    return perm_model.UserRole.has_permission(user.id, permission, scope, scope_id)
+    if perm_model.UserRole.has_permission(user.id, permission):
+        return True
+
+    return bool(scope and scope_id) and perm_model.UserRole.has_permission(user.id, permission, scope, scope_id)
 
 
 def _is_registered(permission: str) -> bool:
@@ -372,48 +376,6 @@ def _implicit_roles_have_permission(permission: str, user: model.User | model.An
         roles.append(perm_const.Roles.Authenticated.value)
 
     return bool(roles) and perm_model.RolePermission.is_granted_to_any(roles, permission)
-
-
-def check_package_permission(
-    permission: str,
-    user: model.User | model.AnonymousUser,
-    package: model.Package | None,
-) -> bool:
-    """Check if user has the given permission globally or in the package's organization.
-
-    Args:
-        permission: The permission key to check
-        user: The user to check permissions for
-        package: The package the permission applies to
-
-    Returns:
-        bool: True if user has the permission, False otherwise
-    """
-    return check_organization_permission(permission, user, package.owner_org if package else None)
-
-
-def check_organization_permission(
-    permission: str,
-    user: model.User | model.AnonymousUser,
-    organization_id: str | None,
-) -> bool:
-    """Check if user has the given permission globally or in the organization.
-
-    Args:
-        permission: The permission key to check
-        user: The user to check permissions for
-        organization_id: The ID of the organization the permission applies to
-
-    Returns:
-        bool: True if user has the permission, False otherwise
-    """
-    if check_permission(permission, user):
-        return True
-
-    if not organization_id:
-        return False
-
-    return check_permission(permission, user, perm_const.SCOPE_ORGANIZATION, organization_id)
 
 
 def get_permission_scope_ids(
