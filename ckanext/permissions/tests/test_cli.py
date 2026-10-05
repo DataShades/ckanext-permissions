@@ -47,7 +47,7 @@ class TestExportImport:
         result = cli.invoke(ckan, ["permissions", "export"])
 
         assert not result.exit_code, result.output
-        assert json.loads(result.output)["roles"]["authenticated"] == ["perm_1"]
+        assert json.loads(result.stdout)["roles"]["authenticated"] == ["perm_1"]
 
     def test_import(self, cli):
         perm_model.RolePermission.create(const.Roles.Authenticated.value, "perm_2")
@@ -73,7 +73,7 @@ class TestExportImport:
 
     def test_import_export_roundtrip_has_no_changes(self, cli):
         perm_model.RolePermission.create(const.Roles.Authenticated.value, "perm_1")
-        exported = cli.invoke(ckan, ["permissions", "export"]).output
+        exported = cli.invoke(ckan, ["permissions", "export"]).stdout
 
         result = cli.invoke(ckan, ["permissions", "import"], input=exported)
 
