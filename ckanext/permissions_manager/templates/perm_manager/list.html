@@ -94,11 +94,21 @@
                         {% for permission in perm_group.permissions %}
                             <tr class="perm-permission-row" data-group="{{ group_index }}" data-search="{{ permission.label }} {{ permission.key }} {{ permission.description or '' }}">
                                 <td class="ps-1">
-                                    <p class="m-0">{{ permission.label }}</p>
+                                    <p class="m-0 d-flex align-items-center gap-1">
+                                        <span>{{ permission.label }}</span>
 
-                                    {% if permission.description %}
-                                        <p class="m-0 mt-2"><i>{{ permission.description }}</i></p>
-                                    {% endif %}
+                                        {% if permission.description %}
+                                            <button
+                                                type="button"
+                                                class="btn p-0 perm-description-btn"
+                                                data-bs-toggle="tooltip"
+                                                data-bs-title="{{ permission.description }}"
+                                                aria-label="{{ _('Permission description: {description}').format(description=permission.description) }}"
+                                            >
+                                                <i class="fa fa-info-circle" aria-hidden="true"></i>
+                                            </button>
+                                        {% endif %}
+                                    </p>
 
                                     {% if permission.depends_on %}
                                         <p class="m-0 mt-2 text-muted">

@@ -55,6 +55,16 @@ $cell-bg: var(--bs-body-bg, #fff);
     white-space: nowrap;
 }
 
+.perm-description-btn {
+    color: var(--bs-secondary-color, #6c757d);
+    line-height: 1;
+
+    &:hover,
+    &:focus {
+        color: var(--bs-body-color);
+    }
+}
+
 @keyframes perm-cascaded {
     from {
         background-color: rgba(255, 193, 7, 0.45);
