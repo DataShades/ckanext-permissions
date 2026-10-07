@@ -94,7 +94,7 @@
                         {% for permission in perm_group.permissions %}
                             <tr class="perm-permission-row" data-group="{{ group_index }}" data-search="{{ permission.label }} {{ permission.key }} {{ permission.description or '' }}">
                                 <td class="ps-1">
-                                    <p class="m-0 d-flex align-items-center gap-1">
+                                    <p class="m-0">
                                         <span>{{ permission.label }}</span>
 
                                         {% if permission.description %}
@@ -128,7 +128,6 @@
                                         {% if h.is_permission_blocked_for_role(permission.key, role_id) %}
                                             <span class="perm-blocked text-muted" title="{{ _('Can\'t be given to this role') }}">
                                                 <i class="fa fa-lock" aria-hidden="true"></i>
-                                                {{ _("Not allowed") }}
                                             </span>
                                         {% else %}
                                             <div class="checkbox-wrapper">

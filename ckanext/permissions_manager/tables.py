@@ -13,6 +13,7 @@ import ckanext.tables.shared as t
 
 from ckanext.permissions import const as perm_const
 from ckanext.permissions import model as perm_model
+from ckanext.permissions import utils as perm_utils
 from ckanext.permissions_manager import formatters as pf
 
 
@@ -106,6 +107,13 @@ class RolesTable(t.TableDefinition):
                     callback=lambda: t.ActionHandlerResult(success=True, redirect=tk.url_for("perm_manager.role_add")),
                     with_confirmation=False,
                 ),
+                t.TableActionDefinition(
+                    action="sync",
+                    label=tk._("Sync roles"),
+                    icon="fa fa-rotate",
+                    callback=self.sync_roles,
+                    with_confirmation=False,
+                ),
             ],
         )
 
@@ -129,6 +137,49 @@ class RolesTable(t.TableDefinition):
             success=True,
             message=tk.ungettext("Role has been deleted", "Roles have been deleted", len(rows)),
         )
+
+    def sync_roles(self) -> t.ActionHandlerResult:
+        """Create the roles declared in ckanext.permissions.roles that are missing from the database.
+
+        Mirrors `ckan permissions roles sync`: never overwrites a drifted label/description,
+        never deletes an undeclared role, only reports both as part of the result message.
+        """
+        plan = perm_utils.plan_roles_sync()
+
+        warnings = [
+            tk._(
+                "{role}: declared {field} ({declared!r}) differs from the database ({current!r}); not overwriting"
+            ).format(role=drift.role_id, field=drift.field, declared=drift.declared, current=drift.current)
+            for drift in plan.drifted
+        ]
+        warnings.extend(
+            tk._(
+                "{role} ({label}) is no longer declared: {users} user(s) assigned, "
+                "{permissions} permission(s) granted; not deleting"
+            ).format(role=role.role_id, label=role.label, users=role.user_count, permissions=role.permission_count)
+            for role in plan.undeclared
+        )
+
+        if not plan.to_create:
+            message = tk._("No roles to create")
+            return t.ActionHandlerResult(success=True, message="; ".join([message, *warnings]))
+
+        errors = []
+        created = []
+
+        for role in plan.to_create:
+            try:
+                tk.get_action("permission_role_create")({}, dict(role))
+                created.append(role["id"])
+            except tk.ValidationError as e:  # noqa: PERF203 - per-role errors are the point
+                errors.extend(f"{role['id']}: {message}" for message in flatten_errors(e.error_dict))
+
+        if errors:
+            return t.ActionHandlerResult(success=False, error="; ".join(errors))
+
+        message = tk.ungettext("{count} role created", "{count} roles created", len(created)).format(count=len(created))
+
+        return t.ActionHandlerResult(success=True, message="; ".join([message, *warnings]))
 
 
 class UserRolesTable(t.TableDefinition):

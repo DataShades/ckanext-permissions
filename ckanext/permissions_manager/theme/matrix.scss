@@ -31,7 +31,7 @@ $cell-bg: var(--bs-body-bg, #fff);
         }
 
         th.perm-matrix-role {
-            min-width: 8rem;
+            max-width: 8rem;
         }
 
         td.perm-changed {

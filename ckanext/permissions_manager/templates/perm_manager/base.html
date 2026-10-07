@@ -8,6 +8,14 @@
     </li>
 {% endblock breadcrumb_content %}
 
+{%- block content %}
+    {% block maintag %}<div class="main">{% endblock %}
+        <div id="content" class="container-fluid">
+            {{ self.main_content() }}
+        </div>
+    </div>
+{%- endblock %}
+
 {% block main_content %}
     {% block flash %}
         {{ super() }}
