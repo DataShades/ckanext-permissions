@@ -110,6 +110,55 @@ def import_permissions(source: IO[str], dry_run: bool):
 
 
 @permissions.group()
+def roles():
+    """Role management commands."""
+
+
+@roles.command("sync")
+@click.option("--dry-run", is_flag=True, help="Show the changes without saving them")
+def sync_roles(dry_run: bool):
+    """Create the roles declared in ckanext.permissions.roles that are missing from the database.
+
+    Warns about declared roles whose label or description differs from the database,
+    and about database roles no longer declared anywhere. Neither is changed automatically.
+    """
+    plan = utils.plan_roles_sync()
+
+    for drift in plan.drifted:
+        click.secho(
+            f"Role {drift.role_id}: declared {drift.field} ({drift.declared!r}) differs from the database "
+            f"({drift.current!r}); not overwriting",
+            fg="yellow",
+        )
+
+    for role in plan.undeclared:
+        click.secho(
+            f"Role {role.role_id} ({role.label}) is no longer declared: {role.user_count} user(s) assigned, "
+            f"{role.permission_count} permission(s) granted; not deleting",
+            fg="yellow",
+        )
+
+    if not plan.to_create:
+        click.secho("No roles to create", fg="green")
+        return
+
+    for role in plan.to_create:
+        click.echo(f"+ {role['id']}\t{role['label']}")
+
+    if dry_run:
+        click.secho(f"{len(plan.to_create)} role(s) to create, run without --dry-run to create them", fg="yellow")
+        return
+
+    try:
+        for role in plan.to_create:
+            tk.get_action("permission_role_create")({"ignore_auth": True}, dict(role))
+    except tk.ValidationError as e:
+        raise click.ClickException(_format_errors(e)) from e
+
+    click.secho(f"{len(plan.to_create)} role(s) created", fg="green")
+
+
+@permissions.group()
 def changes():
     """Change log commands."""
 

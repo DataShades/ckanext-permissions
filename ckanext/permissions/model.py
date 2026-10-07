@@ -118,6 +118,10 @@ class UserRole(tk.BaseModel):
         return roles
 
     @classmethod
+    def count_for_role(cls, role_id: str) -> int:
+        return model.Session.query(cls).filter(cls.role_id == role_id).count()
+
+    @classmethod
     def has_permission(
         cls, user_id: str, permission: str, scope: str = perm_const.SCOPE_GLOBAL, scope_id: str | None = None
     ) -> bool:

@@ -18,6 +18,8 @@ The extension has 3 default roles: `anonymous`, `authenticated` and `administrat
 
 ![roles.png](doc/roles.png)
 
+Custom roles can be created by hand on the Roles page, or declared in YAML by an extension and created automatically with `ckan permissions roles sync` — see [`ckanext.permissions.roles`](#config-settings) and [Role format](#role-format).
+
 ### Assigning roles to users
 
 The extension provides a way to assign roles to users. Roles could be global and scoped to an organization.
@@ -116,6 +118,16 @@ ckanext.permissions.permission_groups =
 
 Setting this option replaces the default list, so include `ckanext.permissions:default_group.yaml` to keep the default permissions. A file whose module can't be imported or whose path doesn't exist is skipped silently. Grants of a permission that no loaded file defines any more stay in the database but have no effect; the permissions page shows how many there are, and `ckan permissions orphans` lists or deletes them.
 
+```ini
+# Role files to load, as `<module>:<path relative to the module>`.
+# Separate multiple files with spaces or new lines.
+# (optional, default: none)
+ckanext.permissions.roles =
+    ckanext.myext:roles.yaml
+```
+
+Declaring a role here doesn't create it by itself; run `ckan permissions roles sync` to create the roles that are missing. See [Role format](#role-format) and [CLI](#cli).
+
 ### Permission group format
 
 Each file defines one group of permissions, shown as a section on the permissions page:
@@ -142,6 +154,25 @@ permissions:
 Set `anonymous: false` on permissions that must never reach visitors who aren't logged in, such as anything that changes data. Saving the permissions page fails if such a permission is given to the `anonymous` role, and a grant that already exists is ignored. A permission allowed for the `anonymous` role can't depend on one that isn't.
 
 Use `depends_on` only when a permission can't work without another one, not to express that one permission is broader than another. List direct requirements only; they're followed in a chain, so `delete_any_resource` requires `update_any_dataset`, which in turn requires `read_any_dataset`.
+
+### Role format
+
+Each file declares one or more custom roles:
+
+```yaml
+roles:
+  - id: data_steward
+    label: Data Steward
+    description: Can manage dataset collaborators and approve datasets
+
+  - id: program_manager
+    label: Program Manager
+    description: Can manage organization members and datasets for their program
+```
+
+`id`, `label` and `description` are all required. `id` follows the same rules as a role created on the Roles page: lowercase letters, `-` and `_` only. A role id declared more than once, whether in the same file or across files, is a warning in the log; the first declaration wins and the rest are ignored.
+
+Declaring a role doesn't create, rename or delete anything by itself. `ckan permissions roles sync` creates the roles that are declared but missing from the database. It never overwrites a role's label or description if they no longer match the declaration, and never deletes a role that's no longer declared — both are reported as warnings instead, so an admin's manual edits or deletion are never silently undone.
 
 ### Checking permissions in your extension
 
@@ -220,6 +251,9 @@ ckan -c /etc/ckan/default/ckan.ini permissions import [FILE] [--dry-run]
 
 # Delete change log entries older than the given number of days
 ckan -c /etc/ckan/default/ckan.ini permissions changes prune --older-than DAYS [--dry-run]
+
+# Create the roles declared in ckanext.permissions.roles that are missing from the database
+ckan -c /etc/ckan/default/ckan.ini permissions roles sync [--dry-run]
 ```
 
 
@@ -238,7 +272,7 @@ To copy permissions from one portal to another, for example from UAT to producti
 ```
 
 Each role in the export gets exactly the permissions listed for it: missing permissions are revoked. Roles that aren't in the export keep their permissions. The import skips and reports these entries:
-- roles that don't exist on the target; create them first on the Roles tab
+- roles that don't exist on the target; create them first on the Roles tab, or declare them in `ckanext.permissions.roles` and run `ckan permissions roles sync`
 - permissions that no loaded permission group defines
 - permissions the role can't be given, such as `update_any_dataset` for `anonymous`
 

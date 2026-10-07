@@ -22,6 +22,8 @@ class PermissionsPlugin(implementation.PermissionLabels, DefaultTranslation, p.S
 
     _permissions_groups: ClassVar[list[perm_types.PermissionGroup]] = []
     _permissions: ClassVar[dict[str, perm_types.PermissionDefinition]] = {}
+    _declared_roles: ClassVar[dict[str, perm_types.RoleDefinition]] = {}
+    _roles_loaded: ClassVar[bool] = False
 
     # IConfigurer
 
@@ -35,5 +37,9 @@ class PermissionsPlugin(implementation.PermissionLabels, DefaultTranslation, p.S
                 for group in plugin._permissions_groups
                 for permission in group["permissions"]
             }
+
+        if not plugin._roles_loaded:
+            plugin._declared_roles = utils.parse_declared_roles()
+            plugin._roles_loaded = True
 
         tk.add_template_directory(config_, "templates")

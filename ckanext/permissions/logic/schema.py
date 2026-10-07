@@ -94,6 +94,19 @@ def permission_group_schema(not_empty: types.Validator, unicode_safe: types.Vali
 
 
 @validator_args
+def role_definition_schema(
+    not_empty: types.Validator,
+    unicode_safe: types.Validator,
+    role_id_validator: types.Validator,
+) -> types.Schema:
+    return {
+        "id": [not_empty, unicode_safe, role_id_validator],
+        "label": [not_empty, unicode_safe],
+        "description": [not_empty, unicode_safe],
+    }
+
+
+@validator_args
 def permission_schema(
     not_empty: types.Validator,
     unicode_safe: types.Validator,

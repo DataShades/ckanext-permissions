@@ -201,6 +201,56 @@ def get_registered_roles() -> dict[str, str]:
     return {role["id"]: role["label"] for role in perm_model.Role.all()}
 
 
+def parse_declared_roles() -> dict[str, perm_types.RoleDefinition]:
+    """Load the roles declared via ckanext.permissions.roles, keyed by id."""
+    roles = _load_role_schemas(tk.aslist(tk.config.get("ckanext.permissions.roles")))
+
+    validate_roles(roles)
+
+    return roles
+
+
+def _load_role_schemas(paths: list[str]) -> dict[str, perm_types.RoleDefinition]:
+    result: dict[str, perm_types.RoleDefinition] = {}
+
+    for path in paths:
+        schema = _load_schema(path)
+
+        if not schema:
+            continue
+
+        for role in schema.get("roles") or []:
+            role_id = role.get("id")
+
+            if role_id in result:
+                log.warning(
+                    "Role '%s' is declared more than once; keeping the first declaration and ignoring '%s'",
+                    role_id,
+                    path,
+                )
+                continue
+
+            result[role_id] = role
+
+    return result
+
+
+def validate_roles(roles: dict[str, perm_types.RoleDefinition]) -> bool:
+    for role in roles.values():
+        data, errors = tk.navl_validate(cast(dict, role), perm_schema.role_definition_schema())
+
+        if errors:
+            raise tk.ValidationError(errors)
+
+    return True
+
+
+def get_declared_roles() -> dict[str, perm_types.RoleDefinition]:
+    from ckanext.permissions.plugin import PermissionsPlugin  # noqa PLC0415
+
+    return PermissionsPlugin._declared_roles  # type: ignore
+
+
 def check_permission(
     permission: str,
     user: model.User | model.AnonymousUser,
@@ -235,7 +285,10 @@ def check_permission(
     if perm_model.UserRole.has_permission(user.id, permission):
         return True
 
-    return bool(scope and scope_id) and perm_model.UserRole.has_permission(user.id, permission, scope, scope_id)
+    if not (scope and scope_id):
+        return False
+
+    return perm_model.UserRole.has_permission(user.id, permission, scope, scope_id)
 
 
 def _is_registered(permission: str) -> bool:
@@ -366,6 +419,83 @@ def _validate_export(data: Any) -> None:
         for granted in roles.values()
     ):
         raise tk.ValidationError(tk._("The export must map each role to a list of permissions"))
+
+
+@dataclasses.dataclass
+class RoleDrift:
+    """A declared role whose label or description differs from the database."""
+
+    role_id: str
+    field: str
+    declared: str
+    current: str
+
+
+@dataclasses.dataclass
+class UndeclaredRole:
+    """A database role no longer declared by any loaded roles file."""
+
+    role_id: str
+    label: str
+    user_count: int
+    permission_count: int
+
+
+@dataclasses.dataclass
+class RolesSyncPlan:
+    """Declared roles (ckanext.permissions.roles) matched against the database.
+
+    Attributes:
+        to_create: Declared roles missing from the database
+        drifted: Declared roles whose label/description differs from the database
+        undeclared: Database roles no longer declared anywhere, with usage counts
+    """
+
+    to_create: list[perm_types.RoleDefinition]
+    drifted: list[RoleDrift]
+    undeclared: list[UndeclaredRole]
+
+
+def plan_roles_sync() -> RolesSyncPlan:
+    """Match the declared roles against the database.
+
+    The 3 implicit/default roles (`perm_const.Roles`) are never reported as
+    undeclared: they aren't meant to be declared through this mechanism, they
+    are seeded by a migration instead, so flagging them here would be a
+    permanent, unfixable warning on every portal.
+    """
+    declared = get_declared_roles()
+    existing = {role["id"]: role for role in perm_model.Role.all()}
+
+    to_create = [role for role_id, role in declared.items() if role_id not in existing]
+
+    drifted: list[RoleDrift] = []
+
+    for role_id, role in declared.items():
+        current = existing.get(role_id)
+
+        if not current:
+            continue
+
+        if current["label"] != role["label"]:
+            drifted.append(RoleDrift(role_id, "label", role["label"], current["label"]))
+
+        if current["description"] != role["description"]:
+            drifted.append(RoleDrift(role_id, "description", role["description"], current["description"]))
+
+    implicit_and_default = {role.value for role in perm_const.Roles}
+    undeclared_ids = sorted(set(existing) - set(declared) - implicit_and_default)
+    undeclared = [
+        UndeclaredRole(
+            role_id,
+            existing[role_id]["label"],
+            user_count=perm_model.UserRole.count_for_role(role_id),
+            permission_count=len(perm_model.RolePermission.get_for_role(role_id)),
+        )
+        for role_id in undeclared_ids
+    ]
+
+    return RolesSyncPlan(to_create, drifted, undeclared)
 
 
 def _implicit_roles_have_permission(permission: str, user: model.User | model.AnonymousUser) -> bool:

@@ -1,0 +1,8 @@
+roles:
+  - id: data_curator
+    label: Data Curator
+    description: Can curate and publish datasets on behalf of a program
+
+  - id: program_manager
+    label: Program Manager
+    description: Can manage organization membership and datasets for their program

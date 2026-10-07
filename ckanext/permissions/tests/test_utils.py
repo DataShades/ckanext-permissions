@@ -9,7 +9,7 @@ from ckan.tests.helpers import call_action
 
 from ckanext.permissions import const, utils
 from ckanext.permissions import model as perm_model
-from ckanext.permissions.types import PermissionDefinition, PermissionGroup
+from ckanext.permissions.types import PermissionDefinition, PermissionGroup, RoleDefinition
 from ckanext.permissions.utils import validate_groups
 
 
@@ -206,6 +206,60 @@ class TestGetPermissionGroups:
         result = utils.get_permission_groups()
 
         assert [group["name"] for group in result] == ["Test group", "Default group"]
+
+
+@pytest.mark.usefixtures("with_plugins")
+class TestLoadRoleSchemas:
+    def test_valid_schema(self):
+        result = utils._load_role_schemas(["ckanext.permissions:tests/data/test_roles.yaml"])
+
+        assert set(result) == {"data_curator", "program_manager"}
+        assert result["data_curator"]["label"] == "Data Curator"
+
+    def test_nonexistent_file(self):
+        assert utils._load_role_schemas(["ckanext.permissions:tests/data/missing.yaml"]) == {}
+
+    def test_duplicate_role_is_dropped(self):
+        with mock.patch.object(utils.log, "warning") as warning:
+            result = utils._load_role_schemas(
+                [
+                    "ckanext.permissions:tests/data/test_roles.yaml",
+                    "ckanext.permissions:tests/data/test_roles.yaml",
+                ]
+            )
+
+        assert set(result) == {"data_curator", "program_manager"}
+        assert warning.call_count == 2
+
+
+@pytest.mark.usefixtures("with_plugins")
+class TestParseDeclaredRoles:
+    def test_valid_roles(self):
+        assert set(utils.parse_declared_roles()) == {"data_curator", "program_manager"}
+
+
+@pytest.mark.usefixtures("with_plugins")
+class TestValidateRoles:
+    def test_valid_role(self):
+        assert utils.validate_roles(
+            {"xxx": RoleDefinition(id="xxx", label="xxx", description="xxx")}
+        )
+
+    def test_missing_label(self):
+        with pytest.raises(tk.ValidationError, match="Missing value"):
+            utils.validate_roles({"xxx": RoleDefinition(id="xxx", label="", description="xxx")})
+
+    def test_invalid_id(self):
+        with pytest.raises(tk.ValidationError):
+            utils.validate_roles({"XXX": RoleDefinition(id="XXX", label="xxx", description="xxx")})
+
+
+@pytest.mark.usefixtures("with_plugins")
+class TestGetDeclaredRoles:
+    def test_get_declared_roles(self):
+        result = utils.get_declared_roles()
+
+        assert set(result) == {"data_curator", "program_manager"}
 
 
 @pytest.mark.usefixtures("with_plugins")
@@ -474,3 +528,53 @@ class TestPlanPermissionsImport:
     def test_invalid_export(self, data, message):
         with pytest.raises(tk.ValidationError, match=message):
             utils.plan_permissions_import(data)
+
+
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestPlanRolesSync:
+    def test_matching_roles_have_no_changes(self):
+        for role_id, role in utils.get_declared_roles().items():
+            perm_model.Role.create(role_id, role["label"], role["description"])
+
+        plan = utils.plan_roles_sync()
+
+        assert plan.to_create == []
+        assert plan.drifted == []
+        assert plan.undeclared == []
+
+    def test_missing_role_is_queued_for_creation(self):
+        plan = utils.plan_roles_sync()
+
+        assert {role["id"] for role in plan.to_create} == {"data_curator", "program_manager"}
+
+    def test_drifted_label_is_reported_but_not_changed(self):
+        perm_model.Role.create("data_curator", "Old Label", utils.get_declared_roles()["data_curator"]["description"])
+        perm_model.Role.create(
+            "program_manager",
+            utils.get_declared_roles()["program_manager"]["label"],
+            utils.get_declared_roles()["program_manager"]["description"],
+        )
+
+        plan = utils.plan_roles_sync()
+
+        assert plan.drifted == [
+            utils.RoleDrift("data_curator", "label", "Data Curator", "Old Label"),
+        ]
+        assert perm_model.Role.get("data_curator").label == "Old Label"  # type: ignore
+
+    def test_undeclared_role_is_reported_with_usage_counts(self, test_role, user_factory):
+        user = user_factory()
+
+        perm_model.RolePermission.create(test_role["id"], "perm_1")
+        perm_model.UserRole.create(user["id"], test_role["id"])
+
+        plan = utils.plan_roles_sync()
+
+        assert plan.undeclared == [
+            utils.UndeclaredRole(test_role["id"], test_role["label"], user_count=1, permission_count=1),
+        ]
+
+    def test_default_roles_are_never_undeclared(self):
+        plan = utils.plan_roles_sync()
+
+        assert all(role.role_id not in {role.value for role in const.Roles} for role in plan.undeclared)

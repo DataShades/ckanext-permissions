@@ -100,6 +100,52 @@ class TestExportImport:
         assert message in result.output
 
 
+@pytest.mark.usefixtures("with_plugins", "clean_db")
+class TestRolesSync:
+    def test_dry_run_reports_without_creating(self, cli):
+        result = cli.invoke(ckan, ["permissions", "roles", "sync", "--dry-run"])
+
+        assert not result.exit_code, result.output
+        assert "+ data_curator\tData Curator" in result.output
+        assert "run without --dry-run" in result.output
+        assert not perm_model.Role.get("data_curator")
+
+    def test_creates_missing_roles(self, cli):
+        result = cli.invoke(ckan, ["permissions", "roles", "sync"])
+
+        assert not result.exit_code, result.output
+        assert "2 role(s) created" in result.output
+        assert perm_model.Role.get("data_curator")
+        assert perm_model.Role.get("program_manager")
+        assert {entry.action for entry in model.Session.query(perm_model.ChangeLog)} == {
+            const.ChangeAction.RoleCreated.value
+        }
+
+    def test_running_twice_is_a_noop(self, cli):
+        cli.invoke(ckan, ["permissions", "roles", "sync"])
+
+        result = cli.invoke(ckan, ["permissions", "roles", "sync"])
+
+        assert not result.exit_code, result.output
+        assert "No roles to create" in result.output
+
+    def test_drifted_label_is_reported_and_not_changed(self, cli):
+        perm_model.Role.create("data_curator", "Old Label", "Can curate and publish datasets on behalf of a program")
+
+        result = cli.invoke(ckan, ["permissions", "roles", "sync"])
+
+        assert not result.exit_code, result.output
+        assert "declared label ('Data Curator') differs from the database ('Old Label')" in result.output
+        assert perm_model.Role.get("data_curator").label == "Old Label"  # type: ignore
+
+    def test_undeclared_role_is_reported_and_not_deleted(self, cli, test_role):
+        result = cli.invoke(ckan, ["permissions", "roles", "sync"])
+
+        assert not result.exit_code, result.output
+        assert f"Role {test_role['id']} ({test_role['label']}) is no longer declared" in result.output
+        assert perm_model.Role.get(test_role["id"])
+
+
 def _log_entry(days_ago: int) -> str:
     entry = perm_model.ChangeLog.create(const.ChangeAction.RoleCreated, "editor", commit=False)
     entry.timestamp = datetime.now(timezone.utc) - timedelta(days=days_ago)

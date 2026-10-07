@@ -8,3 +8,9 @@ groups:
         editable: false
         default:
           - ckanext.permissions:default_group.yaml
+
+      - key: ckanext.permissions.roles
+        description: The list of role declaration files to load
+        type: list
+        editable: false
+        default: []

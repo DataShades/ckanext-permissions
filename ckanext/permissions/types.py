@@ -19,6 +19,16 @@ class PermissionDefinition(TypedDict):
     anonymous: NotRequired[bool]
 
 
+class RoleDefinition(TypedDict):
+    id: str
+    label: str
+    description: str
+
+
+class RolesFile(TypedDict):
+    roles: list[RoleDefinition]
+
+
 class PermissionRoleDefinition(TypedDict):
     role: str
     state: str
